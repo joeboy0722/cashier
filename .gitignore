@@ -144,6 +144,9 @@ backend/app/cashier.db
 backend/cashier.db
 uploads/
 
+# 測試與臨時腳本目錄
+scratch/
+
 # Agentic / Gemini workspace configs
 .gemini/
 .agents/
