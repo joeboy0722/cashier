@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import models, schemas, crud
-from .database import engine, Base, get_db
+from .database import engine, Base, get_db, get_base_dir
 
 # 初始化資料庫表格
 models.Base.metadata.create_all(bind=engine)
@@ -298,16 +298,18 @@ async def clear_table(name: str, db: Session = Depends(get_db)):
 
 # ----------------- 靜態檔案與首頁導向 -----------------
 
-# 取得目前 main.py 所在的目錄絕對路徑 (d:/cashier/backend/app)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# 向上兩層並指向 frontend 目錄 (d:/cashier/frontend)
-frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "frontend"))
+# 取得執行基準目錄：
+#   開發環境 → d:/cashier/  (main.py 向上兩層)
+#   打包 exe → exe 所在目錄
+# 兩種情況下 frontend/ 和 uploads/ 都在基準目錄的同一層
+base_dir = get_base_dir()
+frontend_dir = os.path.join(base_dir, "frontend")
+upload_dir = os.path.join(base_dir, "uploads")
 
-# 掛載前端網頁目錄，讓 /frontend 路由可以讀取所有 HTML/JS/CSS 靜態檔
+# 掛載前端網頁目錄，讓 /cashier/frontend 路由可以讀取所有 HTML/JS/CSS 靜態檔
 app.mount("/cashier/frontend", StaticFiles(directory=frontend_dir), name="frontend")
 
-# 建立與掛載 uploads 目錄 (與 frontend 同層，以防被覆寫)
-upload_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "uploads"))
+# 建立與掛載 uploads 目錄
 os.makedirs(upload_dir, exist_ok=True)
 app.mount("/cashier/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
@@ -343,6 +345,10 @@ def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    # 直接執行 python main.py 時啟動服務
-    print(f"正在啟動收銀系統服務... 前端目錄已綁定至: {frontend_dir}")
+    # 直接執行 python main.py 或打包後 exe 啟動時
+    print(f"=== 收銀系統啟動 ===")
+    print(f"基準目錄  : {base_dir}")
+    print(f"前端目錄  : {frontend_dir}")
+    print(f"上傳目錄  : {upload_dir}")
+    print(f"伺服器網址: http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)

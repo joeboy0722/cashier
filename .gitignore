@@ -27,10 +27,14 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the GDF, so they can be added to .gitignore
+#  通常 .spec 由腳本自動生成可以忽略，但本專案手動維護 cashier.spec，故加入版控
+#  忽略 PyInstaller 自動重新生成的 spec (非 cashier.spec)
 *.manifest
-*.spec
+# *.spec  ← 不忽略，cashier.spec 需要納入版控
+
+# PyInstaller 打包產出目錄
+build/
+dist/
 
 # Installer logs
 pip-log.txt
