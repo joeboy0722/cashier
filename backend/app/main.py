@@ -72,7 +72,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.websocket("/ws")
+@app.websocket("/cashier/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
@@ -86,7 +86,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # ----------------- API 路由 -----------------
 
 # 1. 系統 IP 設定
-@app.get("/api/config/ip")
+@app.get("/cashier/api/config/ip")
 def get_ip_config(db: Session = Depends(get_db)):
     config = crud.get_system_config(db, "server_ip")
     internal_ip = get_internal_ip()
@@ -98,13 +98,13 @@ def get_ip_config(db: Session = Depends(get_db)):
         "active_ip": config.value if (config and config.value.strip()) else internal_ip
     }
 
-@app.post("/api/config/ip")
+@app.post("/cashier/api/config/ip")
 def update_ip_config(config_in: schemas.SystemConfigUpdate, db: Session = Depends(get_db)):
     config = crud.update_system_config(db, "server_ip", config_in.value)
     return {"message": "IP 設定已更新", "server_ip": config.value}
 
 # 2. 點餐介面配置 Layout Config
-@app.get("/api/layout/{device_type}")
+@app.get("/cashier/api/layout/{device_type}")
 def get_layout(device_type: str, db: Session = Depends(get_db)):
     config = crud.get_layout_config(db, device_type)
     if not config:
@@ -130,25 +130,25 @@ def get_layout(device_type: str, db: Session = Depends(get_db)):
         config = crud.update_layout_config(db, device_type, default_val)
     return json.loads(config.config_json)
 
-@app.post("/api/layout/{device_type}")
+@app.post("/cashier/api/layout/{device_type}")
 def save_layout(device_type: str, request_data: dict, db: Session = Depends(get_db)):
     config_json = json.dumps(request_data)
     crud.update_layout_config(db, device_type, config_json)
     return {"message": f"{device_type} 介面配置已更新"}
 
 # 3. 桌號管理
-@app.get("/api/tables", response_model=List[schemas.DiningTable])
+@app.get("/cashier/api/tables", response_model=List[schemas.DiningTable])
 def read_tables(db: Session = Depends(get_db)):
     return crud.get_tables(db)
 
-@app.post("/api/tables", response_model=schemas.DiningTable)
+@app.post("/cashier/api/tables", response_model=schemas.DiningTable)
 def add_table(table: schemas.DiningTableCreate, db: Session = Depends(get_db)):
     db_table = crud.get_table_by_name(db, name=table.name)
     if db_table:
         raise HTTPException(status_code=400, detail="此桌號已存在")
     return crud.create_table(db, table)
 
-@app.delete("/api/tables/{name}")
+@app.delete("/cashier/api/tables/{name}")
 def remove_table(name: str, db: Session = Depends(get_db)):
     success = crud.delete_table(db, table_name=name)
     if not success:
@@ -156,22 +156,22 @@ def remove_table(name: str, db: Session = Depends(get_db)):
     return {"message": f"桌號 {name} 已刪除"}
 
 # 4. 菜單分類管理
-@app.get("/api/categories", response_model=List[schemas.Category])
+@app.get("/cashier/api/categories", response_model=List[schemas.Category])
 def read_categories(db: Session = Depends(get_db)):
     return crud.get_categories(db)
 
-@app.post("/api/categories", response_model=schemas.Category)
+@app.post("/cashier/api/categories", response_model=schemas.Category)
 def add_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
     return crud.create_category(db, category)
 
-@app.delete("/api/categories/{id}")
+@app.delete("/cashier/api/categories/{id}")
 def remove_category(id: int, db: Session = Depends(get_db)):
     success = crud.delete_category(db, category_id=id)
     if not success:
         raise HTTPException(status_code=404, detail="分類不存在")
     return {"message": "分類已刪除"}
 
-@app.post("/api/categories/reorder")
+@app.post("/cashier/api/categories/reorder")
 async def reorder_categories(reorder_data: List[schemas.CategoryReorderItem], db: Session = Depends(get_db)):
     crud.reorder_categories(db, reorder_data)
     # 透過 WebSocket 廣播「分類重排」事件，讓所有點餐端能免整理重新排序
@@ -182,22 +182,22 @@ async def reorder_categories(reorder_data: List[schemas.CategoryReorderItem], db
     return {"message": "分類順序已更新"}
 
 # 5. 菜單品項管理
-@app.get("/api/menu", response_model=List[schemas.MenuItem])
+@app.get("/cashier/api/menu", response_model=List[schemas.MenuItem])
 def read_menu(category_id: int = None, db: Session = Depends(get_db)):
     return crud.get_menu_items(db, category_id=category_id)
 
-@app.post("/api/menu", response_model=schemas.MenuItem)
+@app.post("/cashier/api/menu", response_model=schemas.MenuItem)
 def add_menu_item(item: schemas.MenuItemCreate, db: Session = Depends(get_db)):
     return crud.create_menu_item(db, item)
 
-@app.put("/api/menu/{id}", response_model=schemas.MenuItem)
+@app.put("/cashier/api/menu/{id}", response_model=schemas.MenuItem)
 def update_menu_item(id: int, item: schemas.MenuItemCreate, db: Session = Depends(get_db)):
     db_item = crud.update_menu_item(db, item_id=id, item=item)
     if not db_item:
         raise HTTPException(status_code=404, detail="品項不存在")
     return db_item
 
-@app.delete("/api/menu/{id}")
+@app.delete("/cashier/api/menu/{id}")
 def remove_menu_item(id: int, db: Session = Depends(get_db)):
     success = crud.delete_menu_item(db, item_id=id)
     if not success:
@@ -205,15 +205,15 @@ def remove_menu_item(id: int, db: Session = Depends(get_db)):
     return {"message": "品項已刪除"}
 
 # 6. 訂單管理
-@app.get("/api/orders", response_model=List[schemas.Order])
+@app.get("/cashier/api/orders", response_model=List[schemas.Order])
 def read_orders(status: str = None, db: Session = Depends(get_db)):
     return crud.get_orders(db, status=status)
 
-@app.get("/api/orders/active", response_model=List[schemas.Order])
+@app.get("/cashier/api/orders/active", response_model=List[schemas.Order])
 def read_active_orders(db: Session = Depends(get_db)):
     return crud.get_active_orders(db)
 
-@app.post("/api/orders", response_model=schemas.Order)
+@app.post("/cashier/api/orders", response_model=schemas.Order)
 async def submit_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     db_order = crud.create_order(db, order)
     
@@ -239,7 +239,7 @@ async def submit_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     
     return db_order
 
-@app.put("/api/orders/{id}/status", response_model=schemas.Order)
+@app.put("/cashier/api/orders/{id}/status", response_model=schemas.Order)
 async def update_order_status(id: int, status_update: schemas.OrderUpdateStatus, db: Session = Depends(get_db)):
     db_order = crud.update_order_status(db, order_id=id, status=status_update.status)
     if not db_order:
@@ -271,7 +271,7 @@ async def update_order_status(id: int, status_update: schemas.OrderUpdateStatus,
     
     return db_order
 
-@app.post("/api/tables/{name}/clear")
+@app.post("/cashier/api/tables/{name}/clear")
 async def clear_table(name: str, db: Session = Depends(get_db)):
     cancelled_orders = crud.clear_table_orders(db, table_name=name)
     
@@ -304,15 +304,15 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "frontend"))
 
 # 掛載前端網頁目錄，讓 /frontend 路由可以讀取所有 HTML/JS/CSS 靜態檔
-app.mount("/frontend", StaticFiles(directory=frontend_dir), name="frontend")
+app.mount("/cashier/frontend", StaticFiles(directory=frontend_dir), name="frontend")
 
 # 建立與掛載 uploads 目錄 (與 frontend 同層，以防被覆寫)
 upload_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "uploads"))
 os.makedirs(upload_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
+app.mount("/cashier/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 # 圖片上傳 API
-@app.post("/api/upload")
+@app.post("/cashier/api/upload")
 async def upload_image(file: UploadFile = File(...)):
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="只允許上傳圖片檔案")
@@ -328,12 +328,18 @@ async def upload_image(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    return {"image_url": f"/uploads/{filename}"}
+    return {"image_url": f"/cashier/uploads/{filename}"}
+
+
+@app.get("/cashier")
+def read_cashier_root():
+    return RedirectResponse(url="/cashier/frontend/admin.html")
 
 @app.get("/")
+
 def read_root():
     # 預設首頁重新導向到管理者後台
-    return RedirectResponse(url="/frontend/admin.html")
+    return RedirectResponse(url="/cashier/frontend/admin.html")
 
 if __name__ == "__main__":
     import uvicorn

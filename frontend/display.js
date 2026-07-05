@@ -39,7 +39,7 @@ function initClock() {
 // ----------------- 載入進行中訂單 -----------------
 async function loadActiveOrders() {
     try {
-        const res = await fetch('/api/orders/active');
+        const res = await fetch('/cashier/api/orders/active');
         if (!res.ok) throw new Error("無法讀取進行中訂單");
         const orders = await res.json();
         

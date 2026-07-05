@@ -832,7 +832,7 @@ function showQrCodeModal(tableName) {
         baseUrl = `http://${baseUrl}${port}`;
     }
     
-    const qrUrl = `${baseUrl}/frontend/order.html?table=${encodeURIComponent(tableName)}`;
+    const qrUrl = `${baseUrl}/cashier/frontend/order.html?table=${encodeURIComponent(tableName)}`;
     DOM.qrModalUrl.textContent = qrUrl;
     
     // 呼叫 qrcode.js 生成
