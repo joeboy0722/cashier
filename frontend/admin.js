@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ----------------- WebSocket 即時同步 -----------------
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/cashier/ws`;
     
     state.ws = new WebSocket(wsUrl);
     
@@ -281,7 +281,7 @@ function initTabs() {
 // 1. IP 配置
 async function loadIpConfig() {
     try {
-        const data = await API.get('/api/config/ip');
+        const data = await API.get('/cashier/api/config/ip');
         state.ipConfig = data;
         
         DOM.ipConfigInput.value = data.configured_ip;
@@ -297,7 +297,7 @@ async function loadIpConfig() {
 // 2. 桌號資料
 async function loadTables() {
     try {
-        const tables = await API.get('/api/tables');
+        const tables = await API.get('/cashier/api/tables');
         state.tables = tables;
         
         // 渲染收銀桌況
@@ -359,7 +359,7 @@ async function viewTableOrders(table) {
 
     try {
         // 取得所有進行中訂單 (包含 unpaid, pending, ready)
-        const orders = await API.get('/api/orders/active');
+        const orders = await API.get('/cashier/api/orders/active');
         // 篩選出目前桌子的訂單
         const tableOrders = orders.filter(o => o.table_name === table.name);
         
@@ -442,7 +442,7 @@ async function handleCheckout() {
     
     try {
         // 取得該桌進行中的訂單
-        const activeOrders = await API.get('/api/orders/active');
+        const activeOrders = await API.get('/cashier/api/orders/active');
         const tableOrders = activeOrders.filter(o => o.table_name === tableName);
         
         const hasUnpaid = tableOrders.some(o => o.status === 'unpaid');
@@ -452,7 +452,7 @@ async function handleCheckout() {
             if (confirm(`確認已收取 [${tableName}] 現金付款？\n確認後訂單將送至大螢幕與廚房製作。`)) {
                 const unpaidOrders = tableOrders.filter(o => o.status === 'unpaid');
                 for (const order of unpaidOrders) {
-                    await API.put(`/api/orders/${order.id}/status`, { status: "pending" });
+                    await API.put(`/cashier/api/orders/${order.id}/status`, { status: "pending" });
                 }
                 showToast(`💸 ${tableName} 已完成收款並已送單`, 'success');
                 state.selectedTable = null;
@@ -468,7 +468,7 @@ async function handleCheckout() {
                 // 先付款模式下用餐完畢清理桌位
                 if (confirm(`確認 [${tableName}] 顧客已用餐完畢離席？\n確認後桌位將釋放重設為空閒。`)) {
                     for (const order of tableOrders) {
-                        await API.put(`/api/orders/${order.id}/status`, { status: "paid" });
+                        await API.put(`/cashier/api/orders/${order.id}/status`, { status: "paid" });
                     }
                     showToast(`🧹 ${tableName} 用餐完畢，桌位已釋放`, 'success');
                     state.selectedTable = null;
@@ -481,7 +481,7 @@ async function handleCheckout() {
                 // 後付款模式下現場付款結帳，變更狀態為 paid (已結帳)
                 if (confirm(`確認對 [${tableName}] 進行現場結帳與收銀？`)) {
                     for (const order of tableOrders) {
-                        await API.put(`/api/orders/${order.id}/status`, { status: "paid" });
+                        await API.put(`/cashier/api/orders/${order.id}/status`, { status: "paid" });
                     }
                     showToast(`💰 ${tableName} 已現場結帳完成`, 'success');
                     state.selectedTable = null;
@@ -501,7 +501,7 @@ async function handleCheckout() {
 // 3. 菜單分類與品項
 async function loadCategories() {
     try {
-        const categories = await API.get('/api/categories');
+        const categories = await API.get('/cashier/api/categories');
         state.categories = categories;
         
         // 渲染側邊分類
@@ -515,7 +515,7 @@ async function loadCategories() {
 
 async function loadMenuItems() {
     try {
-        const items = await API.get('/api/menu');
+        const items = await API.get('/cashier/api/menu');
         state.menuItems = items;
         renderItemsGrid(items);
     } catch (err) {
@@ -590,11 +590,11 @@ function renderCategoryList(categories) {
                 });
             
             try {
-                await API.post('/api/categories/reorder', sortedCats);
+                await API.post('/cashier/api/categories/reorder', sortedCats);
                 showToast('☰ 分類順序已更新', 'success');
                 
                 // 重新載入分類狀態但不要重新渲染分類列表以免 DOM 被打亂，只重新渲染 Select 選項
-                const updatedCats = await API.get('/api/categories');
+                const updatedCats = await API.get('/cashier/api/categories');
                 state.categories = updatedCats;
                 renderCategorySelect(updatedCats);
             } catch (err) {
@@ -608,7 +608,7 @@ function renderCategoryList(categories) {
             e.stopPropagation();
             if (confirm(`確定刪除分類「${cat.name}」？此操作會一併刪除該分類下所有商品！`)) {
                 try {
-                    await API.delete(`/api/categories/${cat.id}`);
+                    await API.delete(`/cashier/api/categories/${cat.id}`);
                     showToast('分類已成功刪除', 'success');
                     await loadCategories();
                     await loadMenuItems();
@@ -691,7 +691,7 @@ function renderItemsGrid(items) {
         card.querySelector('.btn-delete-item').addEventListener('click', async () => {
             if (confirm(`確認刪除品項「${item.name}」？`)) {
                 try {
-                    await API.delete(`/api/menu/${item.id}`);
+                    await API.delete(`/cashier/api/menu/${item.id}`);
                     showToast('商品已刪除', 'success');
                     await loadMenuItems();
                 } catch (err) {
@@ -707,7 +707,7 @@ function renderItemsGrid(items) {
 // ----------------- 點餐介面設計器 -----------------
 async function loadLayoutConfig() {
     try {
-        const config = await API.get(`/api/layout/${state.currentDeviceType}`);
+        const config = await API.get(`/cashier/api/layout/${state.currentDeviceType}`);
         
         // 設定表單值
         DOM.designerRestaurantName.value = config.restaurantName || '';
@@ -769,7 +769,7 @@ async function saveLayoutConfig() {
     };
     
     try {
-        await API.post(`/api/layout/${state.currentDeviceType}`, data);
+        await API.post(`/cashier/api/layout/${state.currentDeviceType}`, data);
         showToast('🎨 介面視覺配置已儲存！', 'success');
     } catch (err) {
         showToast('儲存視覺配置失敗', 'error');
@@ -804,7 +804,7 @@ function renderTablesManagerList(tables) {
         card.querySelector('.btn-delete-table').addEventListener('click', async () => {
             if (confirm(`確定刪除「${table.name}」？此操作不會影響已完成的訂單。`)) {
                 try {
-                    await API.delete(`/api/tables/${table.name}`);
+                    await API.delete(`/cashier/api/tables/${table.name}`);
                     showToast('桌位已成功移除', 'success');
                     await loadTables();
                 } catch (err) {
@@ -1090,7 +1090,7 @@ function initEvents() {
         }
         
         try {
-            await API.post('/api/categories', { name, display_order: displayOrder });
+            await API.post('/cashier/api/categories', { name, display_order: displayOrder });
             showToast('分類新增成功', 'success');
             closeAllModals();
             await loadCategories();
@@ -1155,11 +1155,11 @@ function initEvents() {
         try {
             if (id) {
                 // 編輯
-                await API.put(`/api/menu/${id}`, payload);
+                await API.put(`/cashier/api/menu/${id}`, payload);
                 showToast('品項已更新', 'success');
             } else {
                 // 新建
-                await API.post('/api/menu', payload);
+                await API.post('/cashier/api/menu', payload);
                 showToast('品項新增成功', 'success');
             }
             closeAllModals();
@@ -1219,7 +1219,7 @@ function initEvents() {
     DOM.btnSaveIp.addEventListener('click', async () => {
         const val = DOM.ipConfigInput.value.trim();
         try {
-            await API.post('/api/config/ip', { value: val });
+            await API.post('/cashier/api/config/ip', { value: val });
             showToast('🌐 IP 位址已儲存更新', 'success');
             await loadIpConfig();
         } catch (err) {}
@@ -1234,7 +1234,7 @@ function initEvents() {
         }
         
         try {
-            await API.post('/api/tables', { name });
+            await API.post('/cashier/api/tables', { name });
             showToast(`桌位「${name}」新增成功`, 'success');
             DOM.newTableName.value = '';
             await loadTables();
@@ -1255,7 +1255,7 @@ function initEvents() {
 
         try {
             showToast('正在上傳圖片...', 'info');
-            const res = await fetch('/api/upload', {
+            const res = await fetch('/cashier/api/upload', {
                 method: 'POST',
                 body: formData
             });
@@ -1297,7 +1297,7 @@ function initEvents() {
         const tableName = state.selectedTable.name;
         if (confirm(`⚠️ 確定要強制清空「${tableName}」桌位，並取消該桌所有未完結訂單嗎？\n此操作會取消所有準備中、已出餐與待付款訂單，且不可復原！`)) {
             try {
-                const res = await API.post(`/api/tables/${tableName}/clear`);
+                const res = await API.post(`/cashier/api/tables/${tableName}/clear`);
                 showToast(`🧹 桌位 ${tableName} 已成功強制清空`, 'success');
                 state.selectedTable = null;
                 

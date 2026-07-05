@@ -109,7 +109,7 @@ function createOrderCard(order) {
 // ----------------- WebSocket 連線與即時事件 -----------------
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/cashier/ws`;
     
     state.ws = new WebSocket(wsUrl);
     

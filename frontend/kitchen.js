@@ -186,7 +186,7 @@ async function setOrderStatus(orderId, status) {
 // ----------------- WebSocket 連線與即時更新 -----------------
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/cashier/ws`;
     
     state.ws = new WebSocket(wsUrl);
     

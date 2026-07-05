@@ -129,7 +129,7 @@ async function showBindScreen() {
     DOM.orderScreen.classList.add('hidden');
     
     try {
-        const tables = await API.get('/api/tables');
+        const tables = await API.get('/cashier/api/tables');
         DOM.bindTableSelect.innerHTML = tables.map(t => `
             <option value="${t.name}">${t.name}</option>
         `).join('');
@@ -167,7 +167,7 @@ async function initOrderSystem() {
 // ----------------- 即時同步連線 (WebSocket) -----------------
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/cashier/ws`;
     const ws = new WebSocket(wsUrl);
     
     ws.onmessage = async (event) => {
@@ -214,7 +214,7 @@ function initWebSocket() {
 async function checkActiveOrders() {
     if (!state.tableName) return;
     try {
-        const orders = await API.get('/api/orders/active');
+        const orders = await API.get('/cashier/api/orders/active');
         // 篩選出目前桌子的進行中訂單
         const tableOrders = orders.filter(o => o.table_name === state.tableName);
         
@@ -239,7 +239,7 @@ async function checkActiveOrders() {
 // 顯示已點餐明細 Modal
 async function showOrderedHistoryModal() {
     try {
-        const orders = await API.get('/api/orders/active');
+        const orders = await API.get('/cashier/api/orders/active');
         const tableOrders = orders.filter(o => o.table_name === state.tableName);
         
         renderOrderedHistory(tableOrders);
@@ -327,7 +327,7 @@ function closeOrderedHistoryModal() {
 // 載入介面視覺配置並套用樣式引擎
 async function loadLayoutConfig() {
     try {
-        const config = await API.get(`/api/layout/${state.mode}`);
+        const config = await API.get(`/cashier/api/layout/${state.mode}`);
         state.layoutConfig = config;
         
         // 1. 渲染餐廳名稱
@@ -377,7 +377,7 @@ function adjustColorBrightness(hex, percent) {
 // ----------------- 載入菜單與渲染 -----------------
 async function loadCategories() {
     try {
-        const categories = await API.get('/api/categories');
+        const categories = await API.get('/cashier/api/categories');
         state.categories = categories;
         renderCategoryNav(categories);
     } catch (err) {
@@ -387,7 +387,7 @@ async function loadCategories() {
 
 async function loadMenuItems() {
     try {
-        const items = await API.get('/api/menu');
+        const items = await API.get('/cashier/api/menu');
         state.menuItems = items;
         filterAndRenderMenu();
     } catch (err) {
@@ -835,7 +835,7 @@ async function submitOrder() {
     };
     
     try {
-        await API.post('/api/orders', orderPayload);
+        await API.post('/cashier/api/orders', orderPayload);
         
         // 清空購物車並關閉抽屜
         state.cart = {};
