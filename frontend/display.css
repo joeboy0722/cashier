@@ -1,0 +1,315 @@
+/* ==========================================================================
+   Antigravity 大螢幕出餐看板 樣式表 (CSS)
+   設計風格: 極致對比科技暗黑 & 精緻出餐卡片發光動畫
+   ========================================================================== */
+
+:root {
+    --bg-main: #060913;
+    --bg-panel: rgba(15, 23, 42, 0.6);
+    --border-color: rgba(255, 255, 255, 0.06);
+    
+    --color-preparing: #f97316; /* 橘黃色 */
+    --color-ready: #10b981;     /* 綠色 */
+    
+    --radius-md: 16px;
+    --radius-lg: 28px;
+    
+    --font-outfit: 'Outfit', 'Noto Sans TC', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-outfit);
+    background-color: var(--bg-main);
+    color: #f8fafc;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* 隱藏滾動條 */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 容器佈局 */
+.display-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    padding-bottom: 50px; /* 給底部狀態列空間 */
+    background: radial-gradient(circle at 50% 50%, rgba(13, 17, 39, 0.8) 0%, #060913 100%);
+}
+
+/* 頂部 Header */
+.display-header {
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    margin-bottom: 20px;
+    background-color: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+.display-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand-logo {
+    font-size: 32px;
+    color: var(--color-ready);
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6));
+}
+
+.display-brand h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.display-clock {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: monospace;
+    color: #94a3b8;
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 6px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+/* 雙欄主板 */
+.board-wrapper {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    height: calc(100vh - 160px);
+}
+
+.board-column {
+    background-color: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 欄位 Header */
+.column-header {
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+.bg-preparing {
+    background: linear-gradient(to right, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05));
+    border-bottom-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+.bg-preparing i, .bg-preparing span {
+    color: var(--color-preparing);
+    text-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+}
+
+.bg-ready {
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
+    border-bottom-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.bg-ready i, .bg-ready span {
+    color: var(--color-ready);
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* 佇列列表 */
+.queue-list {
+    flex-grow: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-content: flex-start;
+}
+
+/* 卡片排版 */
+/* 大螢幕排版，可改為 grid 自適應大小 */
+.column-preparing .queue-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.column-ready .queue-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+/* 卡片基礎樣式 */
+.queue-card {
+    background-color: rgba(30, 41, 59, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    animation: cardSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes cardSlideIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.column-preparing .queue-card {
+    border-left: 4px solid var(--color-preparing);
+}
+
+.column-ready .queue-card {
+    border-left: 6px solid var(--color-ready);
+    background-color: rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.2) rgba(16, 185, 129, 0.2) rgba(16, 185, 129, 0.2) var(--color-ready);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+/* 取餐卡片加強版 - 綠色發光呼吸 */
+.column-ready .queue-card.newly-added {
+    animation: readyFlash 1.5s ease-in-out infinite alternate, cardSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    border-color: var(--color-ready);
+}
+
+@keyframes readyFlash {
+    0% {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+        transform: scale(1.03);
+    }
+}
+
+/* 文字細節 */
+.queue-number {
+    font-size: 38px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.column-preparing .queue-number {
+    color: #f1f5f9;
+}
+
+.column-ready .queue-number {
+    color: #ffffff;
+    font-size: 48px;
+    text-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.queue-table {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 2px 10px;
+    border-radius: 20px;
+}
+
+.column-ready .queue-table {
+    font-size: 20px;
+    color: #ffffff;
+    background-color: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* 出餐卡片消失動畫 */
+.queue-card.remove-out {
+    animation: cardFadeOut 0.4s ease forwards !important;
+}
+
+@keyframes cardFadeOut {
+    to { transform: scale(0.8) translateY(-20px); opacity: 0; }
+}
+
+/* ==========================================================================
+   狀態燈
+   ========================================================================== */
+.display-status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 36px;
+    background-color: #060812;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 24px;
+    z-index: 100;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.pulse-green {
+    background-color: var(--color-ready);
+    box-shadow: 0 0 6px var(--color-ready);
+    animation: wsPulse 2s infinite;
+}
+
+@keyframes wsPulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* 輔助 */
+.animate-pulse-fast {
+    animation: fastPulse 1.2s infinite;
+}
+
+@keyframes fastPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大螢幕出餐看板</title>
+    <!-- Google Fonts Outfit & Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入看板樣式 -->
+    <link rel="stylesheet" href="display.css">
+</head>
+<body>
+    <div class="display-container">
+        <!-- 頂部資訊列 -->
+        <header class="display-header">
+            <div class="display-brand">
+                <i class="fa-solid fa-bell brand-logo"></i>
+                <h2>美味即時出餐看板</h2>
+            </div>
+            <div class="display-clock" id="display-clock-el">
+                00:00:00
+            </div>
+        </header>
+
+        <!-- 雙欄看板主要區域 -->
+        <main class="board-wrapper">
+            <!-- 左側：準備中 -->
+            <section class="board-column column-preparing">
+                <div class="column-header bg-preparing">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>準備中 (Preparing)</span>
+                </div>
+                <div class="queue-list no-scrollbar" id="preparing-list">
+                    <!-- 動態載入準備中訂單 -->
+                    <!-- 範例：
+                    <div class="queue-card">
+                        <span class="queue-number">#1024</span>
+                        <span class="queue-table">Table 3</span>
+                    </div>
+                    -->
+                </div>
+            </section>
+
+            <!-- 右側：請取餐 -->
+            <section class="board-column column-ready">
+                <div class="column-header bg-ready">
+                    <i class="fa-solid fa-circle-check animate-pulse-fast"></i>
+                    <span>請取餐 (Ready for Pickup)</span>
+                </div>
+                <div class="queue-list no-scrollbar" id="ready-list">
+                    <!-- 動態載入請取餐訂單 -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 即時狀態燈 -->
+    <div class="display-status-bar">
+        <span class="status-indicator">
+            <span class="dot pulse-green" id="ws-dot"></span>
+            <span id="ws-text">即時伺服器連線成功</span>
+        </span>
+    </div>
+
+    <!-- 引入看板邏輯 -->
+    <script src="display.js"></script>
+</body>
+</html>

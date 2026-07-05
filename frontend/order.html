@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點餐系統</title>
+    <!-- Google Fonts Outfit & Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入點餐端樣式 -->
+    <link rel="stylesheet" href="order.css">
+</head>
+<body>
+    <!-- 1. 平板登入綁定桌號畫面 (若無桌號參數且未綁定時顯示) -->
+    <div class="bind-container hidden" id="bind-screen">
+        <div class="bind-card card">
+            <div class="bind-header">
+                <i class="fa-solid fa-tablet-screen-button bind-icon"></i>
+                <h2>平板點餐端綁定</h2>
+                <p>請選擇此平板所屬的桌號，綁定後將載入平板專用的點餐介面。</p>
+            </div>
+            <div class="form-group">
+                <label for="bind-table-select">選擇綁定桌號</label>
+                <select id="bind-table-select" class="form-control">
+                    <!-- 動態載入桌號 -->
+                </select>
+            </div>
+            <button class="btn btn-primary btn-block" id="btn-bind-table">
+                <i class="fa-solid fa-link"></i> 確認綁定並開始點餐
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. 顧客/平板點餐主畫面 -->
+    <div class="order-app hidden" id="order-screen">
+        <!-- 頂部餐館資訊 -->
+        <header class="order-header" id="order-header-el">
+            <div class="restaurant-info">
+                <h1 id="restaurant-name-display">行動美味餐廳</h1>
+                <span class="table-badge"><i class="fa-solid fa-chair"></i> <span id="table-name-display">桌號</span></span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <!-- 已點餐歷史查看按鈕 -->
+                <button class="btn btn-sm btn-outline hidden" id="btn-view-ordered" title="查看已點餐點" style="background: transparent; color: var(--primary-color); border-color: var(--primary-color); font-size: 12px; padding: 6px 12px;">
+                    <i class="fa-solid fa-receipt"></i> 已點餐點
+                </button>
+                <!-- 平板模式專屬：解除綁定按鈕 -->
+                <button class="btn btn-sm btn-outline hidden" id="btn-unbind-tablet" title="解除綁定桌號" style="padding: 6px 12px;">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 分類導航條 -->
+        <div class="category-nav" id="category-nav-el">
+            <!-- 動態載入分類項目 -->
+        </div>
+
+        <!-- 菜單商品列表 -->
+        <main class="menu-container">
+            <div class="menu-grid" id="menu-items-container">
+                <!-- 動態依據 layout 載入品項 -->
+            </div>
+        </main>
+
+        <!-- 浮動購物車條 -->
+        <div class="cart-bar hidden" id="cart-bar-el">
+            <div class="cart-bar-info" id="cart-trigger">
+                <div class="cart-icon-wrapper">
+                    <i class="fa-solid fa-shopping-bag"></i>
+                    <span class="cart-badge" id="cart-item-count">0</span>
+                </div>
+                <div class="cart-price-summary">
+                    <span class="cart-total-label">合計金額</span>
+                    <span class="cart-total-price" id="cart-total-price-display">NT$ 0</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-order-trigger">
+                <span>送出訂單</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================== 彈出元件 (MODALS & DRAWER) ================== -->
+    <!-- 購物車明細抽屜 (Drawer) -->
+    <div class="drawer-backdrop" id="cart-drawer-backdrop">
+        <div class="cart-drawer">
+            <div class="drawer-header">
+                <h3><i class="fa-solid fa-shopping-cart"></i> 已選購餐點</h3>
+                <button class="drawer-close" id="btn-close-drawer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="drawer-body" id="cart-items-list">
+                <!-- 動態載入購物車細項 -->
+            </div>
+            <div class="drawer-footer">
+                <div class="drawer-summary">
+                    <span>應付總額</span>
+                    <span class="drawer-total-price" id="drawer-total-price-display">NT$ 0</span>
+                </div>
+                <div class="drawer-actions">
+                    <button class="btn btn-secondary btn-block" id="btn-clear-cart">清空全部</button>
+                    <button class="btn btn-primary btn-block" id="btn-submit-order-final">
+                        <i class="fa-solid fa-circle-check"></i> 確認送出點餐
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 點餐送出成功覆蓋頁面 (Success Overlay) -->
+    <div class="success-overlay hidden" id="success-overlay">
+        <div class="success-card">
+            <div class="success-checkmark">
+                <div class="check-icon">
+                    <span class="icon-line line-tip"></span>
+                    <span class="icon-line line-long"></span>
+                    <div class="icon-circle"></div>
+                    <div class="icon-fix"></div>
+                </div>
+            </div>
+            <h2>點餐送出成功！</h2>
+            <p>廚房已收到您的訂單，餐點現點現做，請耐心等候。</p>
+            <p class="success-table-info">桌號：<span id="success-table-name">A1</span></p>
+            <div class="success-footer">
+                <span class="timer-text"><span id="success-timer">3</span> 秒後返回點餐頁面</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 已點餐歷史明細 Modal -->
+    <div class="modal-backdrop" id="modal-ordered-history" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 500;">
+        <div class="modal-card" style="background: white; border-radius: var(--radius-lg); width: 90%; max-width: 400px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="font-size: 16px; font-weight: 700; color: var(--text-primary);"><i class="fa-solid fa-receipt"></i> 此桌已點餐明細</h4>
+                <button class="modal-close" id="btn-close-ordered-modal" style="background: none; border: none; font-size: 20px; color: var(--text-secondary); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="ordered-history-list" style="padding: 20px; max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+                <!-- 動態載入已點餐點 -->
+            </div>
+            <div class="modal-footer" style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #f8fafc; display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary btn-block" id="btn-close-ordered-modal-btn">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品規格客製與加購 Modal -->
+    <div class="modal-backdrop" id="modal-spec-select" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 600;">
+        <div class="modal-card" style="background: white; border-radius: var(--radius-lg); width: 90%; max-width: 450px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
+            <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h4 id="spec-product-name" style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0;">商品客製選配</h4>
+                <button class="modal-close" id="btn-close-spec-modal" style="background: none; border: none; font-size: 20px; color: var(--text-secondary); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="spec-options-list" style="padding: 20px; max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+                <!-- 動態載入規格組 -->
+            </div>
+            <div class="modal-footer" style="padding: 16px 20px; border-top: 1px solid var(--border-color); background: #f8fafc; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="quantity-btn btn-minus" id="btn-spec-minus" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-color); background: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-minus" style="font-size: 11px; color: var(--text-secondary);"></i></button>
+                    <span id="spec-quantity" style="font-size: 16px; font-weight: bold; min-width: 20px; text-align: center;">1</span>
+                    <button class="quantity-btn btn-plus" id="btn-spec-plus" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-color); background: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-plus" style="font-size: 11px; color: var(--text-secondary);"></i></button>
+                </div>
+                <button class="btn btn-primary" id="btn-confirm-spec-add" style="flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+                    <span>確認加入</span>
+                    <span id="spec-total-price" style="font-weight: bold;">NT$ 0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示通知 (Toast) -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- 引入點餐邏輯 -->
+    <script src="order.js"></script>
+</body>
+</html>

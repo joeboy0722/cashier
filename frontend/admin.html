@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收銀系統管理後台</title>
+    <!-- Google Fonts Outfit & Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入自訂樣式 -->
+    <link rel="stylesheet" href="admin.css">
+    <!-- 引入 QRCode.js 用於前端生成 QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 側邊導覽列 -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-cash-register brand-icon"></i>
+                <div class="brand-text">
+                    <h1>Antigravity</h1>
+                    <span>收銀與點餐系統</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="tab-cashier">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>桌況與收銀結帳</span>
+                </button>
+                <button class="nav-item" data-tab="tab-menu">
+                    <i class="fa-solid fa-utensils"></i>
+                    <span>菜單與品項管理</span>
+                </button>
+                <button class="nav-item" data-tab="tab-designer">
+                    <i class="fa-solid fa-palette"></i>
+                    <span>點餐介面設計器</span>
+                </button>
+                <button class="nav-item" data-tab="tab-tables">
+                    <i class="fa-solid fa-table-cells"></i>
+                    <span>桌號與 QR Code</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot pulse-green"></span>
+                    <span id="ws-status">即時同步中</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主要內容區域 -->
+        <main class="main-content">
+            <!-- 頂部資訊欄 -->
+            <header class="main-header">
+                <div class="header-title">
+                    <h2 id="current-tab-title">桌況與收銀結帳</h2>
+                    <p id="current-tab-desc">即時查看餐廳桌況，進行現場付費結帳與訂單明細管理。</p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 12px; align-items: center;">
+                    <a href="/frontend/display.html" target="_blank" class="btn btn-sm" id="btn-open-display" style="background: rgba(255, 111, 0, 0.1); border: 1px solid var(--primary-color); color: var(--primary-color); padding: 6px 12px; border-radius: var(--radius-sm); text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                        <i class="fa-solid fa-desktop"></i>
+                        <span>出餐大螢幕</span>
+                    </a>
+                    <a href="/frontend/kitchen.html" target="_blank" class="btn btn-sm" id="btn-open-kitchen" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-color); color: var(--success-color); padding: 6px 12px; border-radius: var(--radius-sm); text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                        <i class="fa-solid fa-fire-burner"></i>
+                        <span>後廚看板 (KDS)</span>
+                    </a>
+                    <div class="server-ip-badge">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span id="header-server-ip">偵測中...</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 內容區塊容器 -->
+            <div class="content-body">
+                
+                <!-- 1. 桌況與收銀分頁 -->
+                <section id="tab-cashier" class="tab-content active">
+                    <div class="cashier-layout">
+                        <!-- 左側：桌況網格 -->
+                        <div class="tables-section">
+                            <div class="section-header">
+                                <h3><i class="fa-solid fa-circle-dot text-amber"></i> 現場桌況</h3>
+                                <span class="table-legend">
+                                    <span class="legend-item"><span class="legend-dot idle"></span>空閒</span>
+                                    <span class="legend-item"><span class="legend-dot unpaid"></span>待付款</span>
+                                    <span class="legend-item"><span class="legend-dot dining"></span>用餐中</span>
+                                </span>
+                            </div>
+                            <div class="tables-grid" id="tables-cashier-grid">
+                                <!-- 動態載入桌子卡片 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 右側：選中桌子的訂單明細 -->
+                        <div class="order-detail-panel" id="order-detail-panel">
+                            <div class="panel-empty-state">
+                                <i class="fa-solid fa-hand-pointer animate-bounce"></i>
+                                <h4>請選擇桌號</h4>
+                                <p>點擊左側桌子可查看該桌的訂單明細並辦理結帳</p>
+                            </div>
+                            <div class="panel-content hidden" id="order-panel-content">
+                                <div class="panel-header">
+                                    <div class="table-info">
+                                        <h3 id="detail-table-name">Table 1</h3>
+                                        <span class="badge badge-dining">用餐中</span>
+                                    </div>
+                                </div>
+                                <div class="orders-list-container" id="detail-orders-list">
+                                    <!-- 動態載入該桌的訂單列表 -->
+                                </div>
+                                <div class="panel-footer">
+                                    <div class="total-summary">
+                                        <span>待結帳總金額</span>
+                                        <h2 id="detail-total-amount">NT$ 0</h2>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        <button class="btn btn-primary btn-block" id="btn-checkout">
+                                            <i class="fa-solid fa-dollar-sign"></i> 現場支付結帳
+                                        </button>
+                                        <button class="btn btn-danger btn-block" id="btn-clear-table-orders" style="background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color);">
+                                            <i class="fa-solid fa-trash-can"></i> 強制清空此桌 (跑單取消)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. 菜單管理分頁 -->
+                <section id="tab-menu" class="tab-content">
+                    <div class="menu-manager-layout">
+                        <!-- 左側：分類管理 -->
+                        <div class="categories-panel">
+                            <div class="panel-header-action">
+                                <h3>菜單分類</h3>
+                                <button class="btn btn-sm btn-icon" id="btn-add-category-modal">
+                                    <i class="fa-solid fa-plus"></i> 新增
+                                </button>
+                            </div>
+                            <ul class="category-list" id="category-list-ul">
+                                <!-- 動態載入分類 -->
+                            </ul>
+                        </div>
+                        <!-- 右側：品項列表 -->
+                        <div class="items-panel">
+                            <div class="panel-header-action">
+                                <h3>品項清單 (<span id="active-category-name">全部</span>)</h3>
+                                <button class="btn btn-sm btn-primary" id="btn-add-item-modal">
+                                    <i class="fa-solid fa-plus"></i> 新增品項
+                                </button>
+                            </div>
+                            <div class="items-grid" id="items-grid-container">
+                                <!-- 動態載入菜單品項 -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. 點餐介面設計器分頁 -->
+                <section id="tab-designer" class="tab-content">
+                    <div class="designer-layout">
+                        <!-- 左側：設定控制台 -->
+                        <div class="designer-controls card">
+                            <div class="control-section">
+                                <label class="label-title">選擇設計目標</label>
+                                <div class="btn-group-toggle">
+                                    <button class="btn active" id="btn-design-mobile">手機介面 (Mobile)</button>
+                                    <button class="btn" id="btn-design-tablet">平板介面 (Tablet)</button>
+                                </div>
+                            </div>
+
+                            <hr class="divider">
+
+                            <div class="control-section">
+                                <label class="label-title" for="designer-restaurant-name">餐廳顯示名稱</label>
+                                <input type="text" id="designer-restaurant-name" class="form-control" value="行動美味餐廳">
+                            </div>
+
+                            <div class="control-section">
+                                <label class="label-title">主題顏色 (Primary Color)</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="designer-primary-color" value="#ff6f00">
+                                    <span class="color-value-text" id="designer-color-hex">#ff6f00</span>
+                                </div>
+                                <div class="color-presets">
+                                    <span class="preset-color" style="background-color: #ff6f00;" data-color="#ff6f00"></span>
+                                    <span class="preset-color" style="background-color: #29b6f6;" data-color="#29b6f6"></span>
+                                    <span class="preset-color" style="background-color: #4caf50;" data-color="#4caf50"></span>
+                                    <span class="preset-color" style="background-color: #e91e63;" data-color="#e91e63"></span>
+                                    <span class="preset-color" style="background-color: #9c27b0;" data-color="#9c27b0"></span>
+                                </div>
+                            </div>
+
+                            <div class="control-section">
+                                <label class="label-title">版面欄位排列</label>
+                                <select id="designer-layout-style" class="form-control">
+                                    <option value="list">單欄清單 (List)</option>
+                                    <option value="grid-2">雙欄網格 (Grid 2)</option>
+                                    <option value="grid-3">三欄網格 (Grid 3)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-section">
+                                <label class="label-title">付款與結帳模式</label>
+                                <select id="designer-payment-mode" class="form-control">
+                                    <option value="post">後付款 (用餐後至櫃台結帳)</option>
+                                    <option value="pre">先付款 (送單後至櫃台付款才製作)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-section">
+                                <label class="label-title">字體大小</label>
+                                <select id="designer-font-size" class="form-control">
+                                    <option value="small">適中 (Small)</option>
+                                    <option value="medium" selected>標準 (Medium)</option>
+                                    <option value="large">偏大 (Large)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-section">
+                                <label class="label-title">商品圖片顯示</label>
+                                <label class="switch-container">
+                                    <input type="checkbox" id="designer-show-images" checked>
+                                    <span class="switch-slider"></span>
+                                    <span class="switch-label">在點餐介面中顯示圖片</span>
+                                </label>
+                            </div>
+
+                            <button class="btn btn-primary btn-block" id="btn-save-layout">
+                                <i class="fa-solid fa-save"></i> 儲存介面設定
+                            </button>
+                        </div>
+
+                        <!-- 右側：即時模擬預覽 -->
+                        <div class="designer-preview">
+                            <div class="preview-header-info">
+                                <span><i class="fa-solid fa-eye"></i> 即時視覺預覽 (模擬畫面)</span>
+                            </div>
+                            <div class="preview-device-container mobile-mode" id="preview-device-container">
+                                <div class="device-notch"></div>
+                                <div class="device-screen" id="preview-screen">
+                                    <!-- 這裡模擬點餐端的 HTML，受 CSS 變數控制 -->
+                                    <div class="preview-restaurant-header">
+                                        <span id="preview-restaurant-name">行動美味餐廳</span>
+                                        <span class="preview-table-no">桌號: A3</span>
+                                    </div>
+                                    <div class="preview-categories-bar">
+                                        <span class="preview-cat-item active">主食類</span>
+                                        <span class="preview-cat-item">精緻配餐</span>
+                                        <span class="preview-cat-item">冷熱飲品</span>
+                                    </div>
+                                    <div class="preview-menu-items" id="preview-menu-list">
+                                        <!-- 商品模擬卡片 -->
+                                        <div class="preview-card">
+                                            <div class="preview-card-img" style="background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150');"></div>
+                                            <div class="preview-card-info">
+                                                <h5>特製厚牛起司堡</h5>
+                                                <p>嚴選厚牛，搭配濃郁起司</p>
+                                                <div class="preview-card-price-row">
+                                                    <span class="price">NT$ 150</span>
+                                                    <span class="add-btn"><i class="fa-solid fa-plus"></i></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-card">
+                                            <div class="preview-card-img" style="background-image: url('https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=150');"></div>
+                                            <div class="preview-card-info">
+                                                <h5>酥炸金黃脆薯</h5>
+                                                <p>金黃酥脆，經典美味</p>
+                                                <div class="preview-card-price-row">
+                                                    <span class="price">NT$ 60</span>
+                                                    <span class="add-btn"><i class="fa-solid fa-plus"></i></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="preview-cart-bar">
+                                        <span><i class="fa-solid fa-shopping-basket"></i> 購物車 (2 份餐點)</span>
+                                        <span>NT$ 210</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. 桌號與 QR Code 分頁 -->
+                <section id="tab-tables" class="tab-content">
+                    <div class="tables-manager-layout">
+                        <!-- IP 設定卡片 -->
+                        <div class="ip-config-card card">
+                            <h3><i class="fa-solid fa-gears text-blue"></i> 點餐伺服器連線設定</h3>
+                            <p class="description">此設定會作為生成點餐 QR Code 網址的開頭。如果您的顧客需要透過外部網路（非店家 Wi-Fi）點餐，請在此填寫店家的「外網 IP」或「自訂網域名稱」。</p>
+                            <div class="ip-form-row">
+                                <div class="form-group">
+                                    <label for="ip-config-input">伺服器 IP 或網址 (Base URL)</label>
+                                    <div class="input-with-badge">
+                                        <input type="text" id="ip-config-input" class="form-control" placeholder="例如: 220.135.xx.xx 或 myrestaurant.com">
+                                        <span class="input-badge" id="ip-detect-badge">預設內網: 192.168.x.x</span>
+                                    </div>
+                                    <small class="form-tip">留空將預設使用本機偵測之內網 IP。請勿加上 http:// 或末尾斜線，系統會自動處理。</small>
+                                </div>
+                                <button class="btn btn-primary" id="btn-save-ip"><i class="fa-solid fa-circle-check"></i> 儲存 IP 設定</button>
+                            </div>
+                        </div>
+
+                        <!-- 桌號列表與新增 -->
+                        <div class="tables-list-section card">
+                            <div class="panel-header-action">
+                                <h3>桌位清單</h3>
+                                <div class="add-table-form">
+                                    <input type="text" id="new-table-name" class="form-control" placeholder="輸入新桌號 (如: A1, Table 5)">
+                                    <button class="btn btn-primary" id="btn-create-table"><i class="fa-solid fa-plus"></i> 新增桌位</button>
+                                </div>
+                            </div>
+                            <div class="tables-manager-list" id="tables-manager-list">
+                                <!-- 動態載入桌位列表與 QR Code 生成按鈕 -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ================== MODALS ================== -->
+    <!-- 1. 新增分類 Modal -->
+    <div class="modal-backdrop" id="modal-category">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h4>新增菜單分類</h4>
+                <button class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="category-name-input">分類名稱</label>
+                    <input type="text" id="category-name-input" class="form-control" placeholder="例如: 主餐、飲品、甜點">
+                </div>
+                <div class="form-group">
+                    <label for="category-order-input">顯示順序 (數字越小越前面)</label>
+                    <input type="number" id="category-order-input" class="form-control" value="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close-btn">取消</button>
+                <button class="btn btn-primary" id="btn-save-category">確定新增</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 新增/編輯品項 Modal -->
+    <div class="modal-backdrop" id="modal-item">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h4 id="item-modal-title">新增菜單品項</h4>
+                <button class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="item-id-input">
+                <div class="form-group">
+                    <label for="item-name-input">品項名稱</label>
+                    <input type="text" id="item-name-input" class="form-control" placeholder="例如: 特製經典牛肉堡">
+                </div>
+                <div class="form-group">
+                    <label for="item-category-select">所屬分類</label>
+                    <select id="item-category-select" class="form-control">
+                        <!-- 動態載入分類選項 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="item-price-input">單價 (NT$)</label>
+                    <input type="number" id="item-price-input" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>商品圖片</label>
+                    <div class="image-upload-wrapper" style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="item-image-file" accept="image/*" style="display: none;">
+                        <button type="button" class="btn" id="btn-trigger-upload" style="flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); color: var(--text-primary);"><i class="fa-solid fa-cloud-arrow-up"></i> 上傳圖片</button>
+                        <input type="text" id="item-image-input" class="form-control" placeholder="或貼上圖片網址 (URL)">
+                    </div>
+                    <div class="upload-preview-container" id="item-image-preview-div" style="margin-top: 10px; display: none;">
+                        <img id="item-image-preview-img" src="" alt="預覽" style="max-height: 80px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="item-desc-input">品項描述</label>
+                    <textarea id="item-desc-input" class="form-control" rows="2" placeholder="簡短說明商品內容物，如：含牛肉、洋蔥、起司"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="switch-container">
+                        <input type="checkbox" id="item-available-input" checked>
+                        <span class="switch-slider"></span>
+                        <span class="switch-label">目前是否供應 (上架狀態)</span>
+                    </label>
+                </div>
+                
+                <!-- 商品規格與加購附餐配置器 -->
+                <div class="form-group" style="border-top: 1px dashed var(--border-color); padding-top: 16px; margin-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <label style="font-weight: 700; font-size: 14px; margin: 0; color: var(--text-primary);"><i class="fa-solid fa-gears"></i> 客製規格與加購附餐配置</label>
+                        <button type="button" class="btn btn-sm btn-primary" id="btn-add-spec-group" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-plus"></i> 新增規格組</button>
+                    </div>
+                    <div id="spec-editor-container" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- 動態規格編輯卡片將插在此處 -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close-btn">取消</button>
+                <button class="btn btn-primary" id="btn-save-item">儲存品項</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. QR Code 顯示 Modal -->
+    <div class="modal-backdrop" id="modal-qrcode">
+        <div class="modal-card modal-qr-size">
+            <div class="modal-header">
+                <h4>點餐 QR Code 生成</h4>
+                <button class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body text-center">
+                <h3 class="qr-table-title" id="qr-modal-table-name">Table 1</h3>
+                <div class="qrcode-wrapper">
+                    <div id="qrcode-canvas"></div>
+                </div>
+                <p class="qr-url-text" id="qr-modal-url">http://192.168.1.100:8000/frontend/order.html?table=Table1</p>
+                <div class="alert alert-info">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>請讓顧客使用手機相機掃描上方 QR Code，即可開始點餐。系統會自動辨識桌號並套用自訂主題。</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-block modal-close-btn">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示通知 (Toast) -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- 引入後台邏輯 -->
+    <script src="admin.js"></script>
+</body>
+</html>
