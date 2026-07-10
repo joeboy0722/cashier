@@ -1739,29 +1739,38 @@ function showAuthModal() {
 }
 
 function initAuthEvents() {
+    console.log("KDS 偵錯: initAuthEvents() 已被執行，成功綁定 onclick 事件至", DOM.btnAuthSubmit);
     // 避免重複綁定
     DOM.btnAuthSubmit.onclick = async () => {
+        console.log("KDS 偵錯: 登入按鈕被點擊了！");
         const username = DOM.authUsername.value.trim();
         const password = DOM.authPassword.value;
+        console.log("KDS 偵錯: 輸入的帳號為:", username, "，密碼長度為:", password.length);
 
         if (!username || !password) {
+            console.log("KDS 偵錯: 欄位不完整，阻退");
             showToast('請填寫所有欄位', 'warning');
             return;
         }
 
         if (!state.isInitialized) {
+            console.log("KDS 偵錯: 目前為 [註冊主管模式]");
             const confirmPwd = DOM.authConfirmPassword.value;
             if (password !== confirmPwd) {
+                console.log("KDS 偵錯: 兩次密碼不一致");
                 showToast('兩次輸入的密碼不一致', 'warning');
                 return;
             }
             if (password.length < 6) {
+                console.log("KDS 偵錯: 密碼太短");
                 showToast('密碼長度至少需 6 個字元', 'warning');
                 return;
             }
 
             try {
+                console.log("KDS 偵錯: 開始發送 register_admin 請求...");
                 const res = await API.post('/cashier/api/auth/register_admin', { username, password });
+                console.log("KDS 偵錯: 註冊成功，結果為:", res);
                 saveUserSession(res);
                 showToast('管理員註冊並登入成功！', 'success');
                 DOM.modalAuth.style.display = 'none';
@@ -1769,17 +1778,22 @@ function initAuthEvents() {
                 await loadInitialData();
                 initEvents();
             } catch (err) {
+                console.error("KDS 偵錯: 註冊失敗，錯誤為:", err);
                 showToast(`註冊失敗: ${err.message}`, 'error');
             }
         } else {
+            console.log("KDS 偵錯: 目前為 [登入模式]");
             try {
+                console.log("KDS 偵錯: 開始發送 login 請求...");
                 const res = await API.post('/cashier/api/auth/login', { username, password });
+                console.log("KDS 偵錯: 登入成功，結果為:", res);
                 saveUserSession(res);
                 showToast('登入成功！', 'success');
                 DOM.modalAuth.style.display = 'none';
                 await loadInitialData();
                 initEvents();
             } catch (err) {
+                console.error("KDS 偵錯: 登入失敗，錯誤為:", err);
                 showToast(`登入失敗: ${err.message}`, 'error');
             }
         }
