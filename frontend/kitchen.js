@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadActiveOrders() {
     try {
-        const orders = await API.get(`${API_BASE}/orders/active`);
+        const orders = await API.get(`${API_BASE}/orders/kitchen`);
         
         // 篩選狀態
         state.preparingOrders = orders.filter(o => o.status === 'pending');

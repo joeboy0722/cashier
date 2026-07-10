@@ -364,6 +364,13 @@ def read_orders(status: str = None, db: Session = Depends(get_db), current_user:
 def read_active_orders(db: Session = Depends(get_db)):
     return crud.get_active_orders(db)
 
+@app.get("/cashier/api/orders/kitchen", response_model=List[schemas.Order])
+def read_kitchen_orders(db: Session = Depends(get_db), current_user: models.User = Depends(require_staff)):
+    """
+    獲取後廚製作中與待取餐的進行中訂單 (需要員工以上權限)
+    """
+    return crud.get_active_orders(db)
+
 @app.post("/cashier/api/orders", response_model=schemas.Order)
 async def submit_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     db_order = crud.create_order(db, order)
