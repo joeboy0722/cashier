@@ -34,6 +34,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 停用前端靜態資源的瀏覽器快取 (避免開發或更新時使用到舊版 JS/CSS)
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/cashier/frontend") or path.endswith((".html", ".js", ".css")):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 # 偵測本機內網 IP
 def get_internal_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
