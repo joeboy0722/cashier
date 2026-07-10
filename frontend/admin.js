@@ -16,6 +16,7 @@ const state = {
         internal_ip: '',
         active_ip: ''
     },
+    transactions: [],
     ws: null
 };
 
@@ -86,7 +87,25 @@ const DOM = {
     qrModalTableName: document.getElementById('qr-modal-table-name'),
     qrModalUrl: document.getElementById('qr-modal-url'),
     qrcodeCanvas: document.getElementById('qrcode-canvas'),
-    toastContainer: document.getElementById('toast-container')
+    toastContainer: document.getElementById('toast-container'),
+    
+    // 歷史交易與收款確認
+    txStartDate: document.getElementById('tx-start-date'),
+    txEndDate: document.getElementById('tx-end-date'),
+    btnQueryTx: document.getElementById('btn-query-tx'),
+    txTableBody: document.getElementById('tx-table-body'),
+    statTotalRevenue: document.getElementById('stat-total-revenue'),
+    statTotalCount: document.getElementById('stat-total-count'),
+    statAvgPrice: document.getElementById('stat-avg-price'),
+    retentionDaysInput: document.getElementById('retention-days-input'),
+    btnSaveRetention: document.getElementById('btn-save-retention'),
+    modalTxDetail: document.getElementById('modal-tx-detail'),
+    receiptTableName: document.getElementById('receipt-table-name'),
+    receiptTime: document.getElementById('receipt-time'),
+    receiptOrderId: document.getElementById('receipt-order-id'),
+    receiptPaymentMethod: document.getElementById('receipt-payment-method'),
+    receiptItemsContainer: document.getElementById('receipt-items-container'),
+    receiptTotalPrice: document.getElementById('receipt-total-price')
 };
 
 // ----------------- API 請求封裝 -----------------
@@ -271,6 +290,11 @@ function initTabs() {
             } else if (tabId === 'tab-tables') {
                 DOM.tabDesc.textContent = '建立您的餐廳桌號，填寫外網 IP 並生成對應點餐 QR Code。';
                 loadTables();
+            } else if (tabId === 'tab-transactions') {
+                DOM.tabDesc.textContent = '查詢歷史收款紀錄、明細以及統計金額，並設定資料庫保留期限。';
+                initTxTabDates();
+                loadTransactions();
+                loadRetentionConfig();
             }
         });
     });
@@ -1309,6 +1333,20 @@ function initEvents() {
             }
         }
     });
+
+    // 9. 歷史交易查詢與快速日期切換
+    DOM.btnQueryTx.addEventListener('click', loadTransactions);
+    
+    document.querySelectorAll('.quick-dates button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.quick-dates button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            handleQuickDateRange(btn.getAttribute('data-range'));
+        });
+    });
+
+    // 10. 保存保留天數設定
+    DOM.btnSaveRetention.addEventListener('click', saveRetentionConfig);
 }
 
 // ----------------- Toast 通知系統 -----------------
@@ -1335,4 +1373,233 @@ function showToast(message, type = 'info') {
             toast.remove();
         });
     }, 3500);
+}
+
+// ----------------- 歷史交易收款明細邏輯 -----------------
+
+// 初始化歷史分頁的日期預設值 (今天)
+function initTxTabDates() {
+    const todayStr = getLocalDateString(new Date());
+    if (!DOM.txStartDate.value) DOM.txStartDate.value = todayStr;
+    if (!DOM.txEndDate.value) DOM.txEndDate.value = todayStr;
+}
+
+// 取得本機日期的 YYYY-MM-DD 格式
+function getLocalDateString(date) {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+}
+
+// 處理快速日期切換
+function handleQuickDateRange(range) {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+    
+    if (range === 'today') {
+        // 今天
+        start = today;
+        end = today;
+    } else if (range === 'yesterday') {
+        // 昨天
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        start = yesterday;
+        end = yesterday;
+    } else if (range === '7days') {
+        // 近 7 天
+        start.setDate(today.getDate() - 6);
+        end = today;
+    } else if (range === '30days') {
+        // 近 30 天
+        start.setDate(today.getDate() - 29);
+        end = today;
+    }
+    
+    DOM.txStartDate.value = getLocalDateString(start);
+    DOM.txEndDate.value = getLocalDateString(end);
+    
+    loadTransactions();
+}
+
+// 載入歷史收款交易
+async function loadTransactions() {
+    const startDate = DOM.txStartDate.value;
+    const endDate = DOM.txEndDate.value;
+    
+    if (!startDate || !endDate) {
+        showToast('請選擇完整的開始與結束日期', 'error');
+        return;
+    }
+    
+    DOM.txTableBody.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center text-muted" style="padding: 40px 0;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 8px;"></i>
+                <p>資料載入中...</p>
+            </td>
+        </tr>
+    `;
+    
+    try {
+        const data = await API.get(`/cashier/api/transactions?start_date=${startDate}&end_date=${endDate}`);
+        state.transactions = data.transactions;
+        
+        // 渲染統計數字
+        DOM.statTotalRevenue.textContent = `NT$ ${data.total_revenue.toLocaleString()}`;
+        DOM.statTotalCount.textContent = `${data.total_count} 筆`;
+        
+        const avg = data.total_count > 0 ? Math.round(data.total_revenue / data.total_count) : 0;
+        DOM.statAvgPrice.textContent = `NT$ ${avg.toLocaleString()}`;
+        
+        // 渲染交易清單表格
+        renderTransactionsTable(data.transactions);
+    } catch (err) {
+        DOM.txTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-danger" style="padding: 40px 0;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 24px; margin-bottom: 8px;"></i>
+                    <p>載入交易資料失敗: ${err.message}</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// 渲染交易表格
+function renderTransactionsTable(transactions) {
+    DOM.txTableBody.innerHTML = '';
+    
+    if (transactions.length === 0) {
+        DOM.txTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted" style="padding: 40px 0;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 28px; margin-bottom: 8px; color: rgba(255,255,255,0.1);"></i>
+                    <p>此區間內無任何收款交易紀錄</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    transactions.forEach(tx => {
+        const tr = document.createElement('tr');
+        
+        // 轉換 ISO 時間字串為本機好讀格式
+        const txTime = new Date(tx.created_at);
+        const timeStr = txTime.toLocaleString([], {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        
+        // 支付方式對應 badge
+        let payBadgeClass = 'badge-other';
+        let payMethodText = tx.payment_method || '未知';
+        if (tx.payment_method === 'Cash') {
+            payBadgeClass = 'badge-cash';
+            payMethodText = '現金 (現場支付)';
+        } else if (tx.payment_method === 'Prepaid') {
+            payBadgeClass = 'badge-prepaid';
+            payMethodText = '先付款 (線上預付)';
+        }
+        
+        tr.innerHTML = `
+            <td>${timeStr}</td>
+            <td>#${tx.order_id}</td>
+            <td><strong style="color: var(--text-primary);">${tx.table_name}</strong></td>
+            <td><span class="badge-pay ${payBadgeClass}">${payMethodText}</span></td>
+            <td class="text-right"><strong style="color: var(--primary-color);">NT$ ${tx.total_price.toLocaleString()}</strong></td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline btn-view-tx" style="padding: 4px 8px; font-size: 11px;">
+                    <i class="fa-solid fa-eye"></i> 明細
+                </button>
+            </td>
+        `;
+        
+        // 點擊明細按鈕或整行彈出詳細資訊 Modal
+        const viewBtn = tr.querySelector('.btn-view-tx');
+        viewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showTxDetailModal(tx);
+        });
+        tr.addEventListener('click', () => {
+            showTxDetailModal(tx);
+        });
+        
+        DOM.txTableBody.appendChild(tr);
+    });
+}
+
+// 顯示交易詳細資訊 Modal
+function showTxDetailModal(tx) {
+    DOM.receiptTableName.textContent = `${tx.table_name} - 交易明細`;
+    
+    const txTime = new Date(tx.created_at);
+    const timeStr = txTime.toLocaleString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    DOM.receiptTime.textContent = `交易時間: ${timeStr}`;
+    DOM.receiptOrderId.textContent = `#${tx.order_id}`;
+    
+    let payText = tx.payment_method || '現場支付';
+    if (tx.payment_method === 'Cash') payText = '現金付款';
+    else if (tx.payment_method === 'Prepaid') payText = '預付款 (已付)';
+    DOM.receiptPaymentMethod.textContent = payText;
+    
+    DOM.receiptTotalPrice.textContent = `NT$ ${tx.total_price.toLocaleString()}`;
+    
+    // 渲染品項
+    DOM.receiptItemsContainer.innerHTML = '';
+    tx.items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'receipt-item-row';
+        
+        row.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                <div>
+                    <span class="receipt-item-name">${item.item_name}</span>
+                    <span class="receipt-item-qty">x${item.quantity}</span>
+                </div>
+                ${item.notes ? `<span class="receipt-item-notes">* ${item.notes}</span>` : ''}
+            </div>
+            <span style="font-weight: 600; color: var(--text-primary);">NT$ ${(item.price * item.quantity).toLocaleString()}</span>
+        `;
+        DOM.receiptItemsContainer.appendChild(row);
+    });
+    
+    openModal(DOM.modalTxDetail);
+}
+
+// 載入歷史紀錄保留天數設定
+async function loadRetentionConfig() {
+    try {
+        const data = await API.get('/cashier/api/config/retention');
+        DOM.retentionDaysInput.value = data.retention_days.toString();
+    } catch (err) {
+        console.error("載入保留期限設定失敗", err);
+    }
+}
+
+// 儲存保留天數設定
+async function saveRetentionConfig() {
+    const days = parseInt(DOM.retentionDaysInput.value);
+    
+    try {
+        const res = await API.post('/cashier/api/config/retention', { retention_days: days });
+        showToast('💾 保留天數設定已成功儲存更新！', 'success');
+    } catch (err) {
+        showToast(`儲存設定失敗: ${err.message}`, 'error');
+    }
 }

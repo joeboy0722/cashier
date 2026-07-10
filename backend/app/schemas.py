@@ -126,3 +126,7 @@ class Order(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ----------------- History Retention Config -----------------
+class RetentionConfigUpdate(BaseModel):
+    retention_days: int

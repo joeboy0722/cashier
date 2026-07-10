@@ -17,7 +17,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from . import models, schemas, crud
+from . import models, schemas, crud, history
 from .database import engine, Base, get_db, get_base_dir
 
 # 初始化資料庫表格
@@ -295,6 +295,30 @@ async def clear_table(name: str, db: Session = Depends(get_db)):
     })
     
     return {"message": f"桌位 {name} 已強制清空，共取消 {len(cancelled_orders)} 筆未完結訂單"}
+
+# 7. 歷史交易與保留設定
+@app.get("/cashier/api/config/retention")
+def get_retention_config(db: Session = Depends(get_db)):
+    config = crud.get_system_config(db, "db_retention_days")
+    if not config:
+        config = crud.update_system_config(db, "db_retention_days", "30")
+    return {"retention_days": int(config.value) if (config and config.value.isdigit()) else 30}
+
+@app.post("/cashier/api/config/retention")
+def update_retention_config(config_in: schemas.RetentionConfigUpdate, db: Session = Depends(get_db)):
+    config = crud.update_system_config(db, "db_retention_days", str(config_in.retention_days))
+    return {"message": "歷史紀錄保留天數已更新", "retention_days": int(config.value)}
+
+@app.get("/cashier/api/transactions")
+def read_transactions(start_date: str = None, end_date: str = None):
+    # 若無指定日期，預設為今日
+    from datetime import datetime
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    if not start_date:
+        start_date = today_str
+    if not end_date:
+        end_date = today_str
+    return history.query_transactions(start_date, end_date)
 
 # ----------------- 靜態檔案與首頁導向 -----------------
 

@@ -44,6 +44,10 @@
                     <i class="fa-solid fa-table-cells"></i>
                     <span>桌號與 QR Code</span>
                 </button>
+                <button class="nav-item" data-tab="tab-transactions">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>歷史收款明細</span>
+                </button>
             </nav>
             <div class="sidebar-footer">
                 <div class="status-indicator">
@@ -328,6 +332,113 @@
                     </div>
                 </section>
 
+                <!-- 5. 歷史收款明細與統計分頁 -->
+                <section id="tab-transactions" class="tab-content">
+                    <div class="transactions-layout">
+                        <!-- 統計摘要卡片 -->
+                        <div class="stats-container">
+                            <div class="stats-card">
+                                <div class="stats-icon"><i class="fa-solid fa-sack-dollar text-emerald"></i></div>
+                                <div class="stats-info">
+                                    <span class="stats-label">總收款金額</span>
+                                    <h3 id="stat-total-revenue">NT$ 0</h3>
+                                </div>
+                            </div>
+                            <div class="stats-card">
+                                <div class="stats-icon"><i class="fa-solid fa-file-invoice-dollar text-blue"></i></div>
+                                <div class="stats-info">
+                                    <span class="stats-label">交易總筆數</span>
+                                    <h3 id="stat-total-count">0 筆</h3>
+                                </div>
+                            </div>
+                            <div class="stats-card">
+                                <div class="stats-icon"><i class="fa-solid fa-calculator text-amber"></i></div>
+                                <div class="stats-info">
+                                    <span class="stats-label">平均客單價</span>
+                                    <h3 id="stat-avg-price">NT$ 0</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 查詢條件與設定 -->
+                        <div class="filter-settings-row">
+                            <!-- 篩選工具列 -->
+                            <div class="filter-card card">
+                                <h3><i class="fa-solid fa-magnifying-glass"></i> 收款交易篩選</h3>
+                                <div class="filter-form">
+                                    <div class="filter-inputs">
+                                        <div class="form-group">
+                                            <label for="tx-start-date">開始日期</label>
+                                            <input type="date" id="tx-start-date" class="form-control">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="tx-end-date">結束日期</label>
+                                            <input type="date" id="tx-end-date" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="filter-actions">
+                                        <button class="btn btn-primary" id="btn-query-tx"><i class="fa-solid fa-search"></i> 查詢</button>
+                                        <div class="quick-dates">
+                                            <button class="btn btn-sm btn-outline active" data-range="today">今日</button>
+                                            <button class="btn btn-sm btn-outline" data-range="yesterday">昨日</button>
+                                            <button class="btn btn-sm btn-outline" data-range="7days">近7日</button>
+                                            <button class="btn btn-sm btn-outline" data-range="30days">近30日</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 資料庫保留設定 -->
+                            <div class="settings-card card">
+                                <h3><i class="fa-solid fa-database-gear"></i> 歷史紀錄保留設定</h3>
+                                <p class="description">設定收款紀錄在資料庫中的保留天數。系統會自動刪除超過此期限的舊 db 檔案，防止儲存空間不足。</p>
+                                <div class="settings-form">
+                                    <div class="form-group">
+                                        <label for="retention-days-input">紀錄保留天數</label>
+                                        <select id="retention-days-input" class="form-control">
+                                            <option value="0">永久保留 (不刪除)</option>
+                                            <option value="7">7 天 (一星期)</option>
+                                            <option value="30" selected>30 天 (一個月)</option>
+                                            <option value="90">90 天 (三個月)</option>
+                                            <option value="180">180 天 (半年)</option>
+                                            <option value="365">365 天 (一年)</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary" id="btn-save-retention"><i class="fa-solid fa-save"></i> 儲存設定</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 交易清單表格 -->
+                        <div class="tx-list-section card">
+                            <h3><i class="fa-solid fa-receipt"></i> 收款交易明細清單</h3>
+                            <div class="table-responsive">
+                                <table class="tx-table" id="tx-table">
+                                    <thead>
+                                        <tr>
+                                            <th>交易時間</th>
+                                            <th>訂單編號</th>
+                                            <th>桌號</th>
+                                            <th>支付方式</th>
+                                            <th class="text-right">收款金額</th>
+                                            <th class="text-center">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tx-table-body">
+                                        <!-- 動態載入交易 -->
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted" style="padding: 40px 0;">
+                                                <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 8px;"></i>
+                                                <p>資料載入中...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -437,6 +548,42 @@
                 <div class="alert alert-info">
                     <i class="fa-solid fa-circle-info"></i>
                     <span>請讓顧客使用手機相機掃描上方 QR Code，即可開始點餐。系統會自動辨識桌號並套用自訂主題。</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-block modal-close-btn">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 交易明細 Modal -->
+    <div class="modal-backdrop" id="modal-tx-detail">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h4><i class="fa-solid fa-circle-info"></i> 交易詳細明細</h4>
+                <button class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div class="tx-receipt-header" style="text-align: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 15px; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 18px; color: var(--text-primary);" id="receipt-table-name">Table 1</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-secondary);" id="receipt-time">交易時間: -</p>
+                </div>
+                <div class="tx-receipt-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin-bottom: 20px; color: var(--text-secondary);">
+                    <div>訂單編號: <strong id="receipt-order-id" style="color: var(--text-primary);">#0</strong></div>
+                    <div>支付方式: <strong id="receipt-payment-method" style="color: var(--text-primary);">Cash</strong></div>
+                </div>
+                <div class="tx-receipt-items">
+                    <div style="font-weight: bold; font-size: 13px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 10px; display: flex; justify-content: space-between;">
+                        <span>品項明細</span>
+                        <span>小計</span>
+                    </div>
+                    <div id="receipt-items-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                        <!-- 動態載入品項 -->
+                    </div>
+                </div>
+                <div class="tx-receipt-footer" style="border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: bold; font-size: 14px;">收款總金額</span>
+                    <h2 style="margin: 0; color: var(--primary-color); font-size: 22px; font-weight: 700;" id="receipt-total-price">NT$ 0</h2>
                 </div>
             </div>
             <div class="modal-footer">

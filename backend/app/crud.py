@@ -198,6 +198,7 @@ def create_order(db: Session, order_in: schemas.OrderCreate):
 def update_order_status(db: Session, order_id: int, status: str):
     db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if db_order:
+        prev_status = db_order.status
         target_status = status
         # 智慧判定：若後廚通知已取餐 (completed)，且該訂單為先付款模式 (Prepaid)，則直接變更為 paid (已結帳)
         if status == "completed" and db_order.payment_method == "Prepaid":
@@ -226,6 +227,25 @@ def update_order_status(db: Session, order_id: int, status: str):
                     
         db.commit()
         db.refresh(db_order)
+        
+        # 判斷是否符合「付款完成/收款確認」觸發條件
+        # 1. 先付款模式：狀態從 unpaid 變更為 pending (收款並送單)
+        # 2. 後付款模式/先付離席：狀態變更為 paid (結帳完成)
+        is_paid_trigger = False
+        if prev_status == "unpaid" and target_status == "pending":
+            is_paid_trigger = True
+        elif prev_status != "paid" and target_status == "paid":
+            is_paid_trigger = True
+            
+        if is_paid_trigger:
+            from .history import record_transaction, clean_expired_databases
+            record_transaction(db_order)
+            
+            # 從設定檔撈取保留天數，預設為 30 天
+            retention_config = db.query(models.SystemConfig).filter(models.SystemConfig.key == "db_retention_days").first()
+            retention_days = int(retention_config.value) if (retention_config and retention_config.value.isdigit()) else 30
+            clean_expired_databases(retention_days)
+            
         return db_order
     return None
 

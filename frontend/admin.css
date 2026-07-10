@@ -1569,3 +1569,218 @@ input[type="color"]::-webkit-color-swatch {
     color: #ffffff !important;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
+
+/* ==========================================================================
+   歷史收款交易樣式
+   ========================================================================== */
+.transactions-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.stats-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stats-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.stats-icon i.text-emerald { color: #10b981; }
+.stats-icon i.text-blue { color: #3b82f6; }
+.stats-icon i.text-amber { color: #f59e0b; }
+
+.stats-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stats-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.stats-info h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.filter-settings-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 992px) {
+    .filter-settings-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.filter-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.quick-dates {
+    display: flex;
+    gap: 6px;
+}
+
+.quick-dates button {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.quick-dates button:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.quick-dates button.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.tx-table th,
+.tx-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tx-table th {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.tx-table tbody tr {
+    transition: background-color var(--transition-fast);
+    cursor: pointer;
+}
+
+.tx-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.text-right { text-align: right !important; }
+.text-center { text-align: center !important; }
+
+/* 支付方式標籤 */
+.badge-pay {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-pay.badge-cash {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-pay.badge-prepaid {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.badge-pay.badge-other {
+    background-color: rgba(156, 163, 175, 0.1);
+    color: #9ca3af;
+}
+
+/* 收據彈窗明細品項 */
+.receipt-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.receipt-item-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.receipt-item-qty {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 6px;
+}
+
+.receipt-item-notes {
+    display: block;
+    font-size: 11px;
+    color: var(--danger-color);
+    margin-top: 2px;
+    padding-left: 6px;
+    font-weight: 600;
+}
