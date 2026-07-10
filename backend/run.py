@@ -30,16 +30,16 @@ args, unknown = parser.parse_known_args()
 # 如果啟用展示模式，在控制台進行確認
 if args.demo:
     print("==================================================")
-    print("⚠️  警告：您正嘗試以【展示模式 (Demo Mode)】啟動系統！")
+    print("[警告] 您正嘗試以【展示模式 (Demo Mode)】啟動系統！")
     print("在此模式下，後台管理介面及所有 API 將不需要登入，並直接擁有【主管】完整管理權限！")
     print("==================================================")
     confirm = input("確認要以此模式啟動嗎？(y/yes): ").strip().lower()
     if confirm not in ['y', 'yes']:
-        print("❌ 啟動已取消，程式退出。")
+        print("[失敗] 啟動已取消，程式退出。")
         sys.exit(0)
     # 設置環境變數傳遞給 app.main
     os.environ["CASHIER_DEMO_MODE"] = "1"
-    print("ℹ️  展示模式已確認啟用！")
+    print("[提示] 展示模式已確認啟用！")
 
 import uvicorn
 from app.main import app, base_dir, frontend_dir, upload_dir

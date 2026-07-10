@@ -547,17 +547,17 @@ if __name__ == "__main__":
     
     if args.demo:
         print("==================================================")
-        print("⚠️  警告：您正嘗試以【展示模式 (Demo Mode)】啟動系統！")
+        print("[警告] 您正嘗試以【展示模式 (Demo Mode)】啟動系統！")
         print("在此模式下，後台管理介面及所有 API 將不需要登入，並直接擁有【主管】完整管理權限！")
         print("==================================================")
         confirm = input("確認要以此模式啟動嗎？(y/yes): ").strip().lower()
         if confirm not in ['y', 'yes']:
-            print("❌ 啟動已取消，程式退出。")
+            print("[失敗] 啟動已取消，程式退出。")
             sys.exit(0)
         os.environ["CASHIER_DEMO_MODE"] = "1"
         # 由於此時 main.py 已經加載，需將全域變數同步設為 True
         DEMO_MODE = True
-        print("ℹ️  展示模式已確認啟用！")
+        print("[提示] 展示模式已確認啟用！")
 
     print(f"=== 收銀系統啟動 ===")
     print(f"基準目錄  : {base_dir}")
