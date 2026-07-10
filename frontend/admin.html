@@ -48,11 +48,25 @@
                     <i class="fa-solid fa-chart-line"></i>
                     <span>歷史收款明細</span>
                 </button>
+                <button class="nav-item hidden" data-tab="tab-users" id="nav-users-btn">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>人員與帳戶管理</span>
+                </button>
             </nav>
             <div class="sidebar-footer">
                 <div class="status-indicator">
                     <span class="dot pulse-green"></span>
                     <span id="ws-status">即時同步中</span>
+                </div>
+                <div class="user-badge" id="sidebar-user-badge" style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-circle-user" style="font-size: 16px; color: var(--primary-color);"></i>
+                        <div style="display: flex; flex-direction: column;">
+                            <span id="login-username" style="font-size: 12px; font-weight: bold; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 80px;">用戶</span>
+                            <span id="login-role" style="font-size: 10px; color: var(--text-secondary);">角色</span>
+                        </div>
+                    </div>
+                    <button id="btn-logout" title="登出系統" style="background: transparent; border: none; color: var(--danger-color); cursor: pointer; padding: 4px; font-size: 14px;"><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
             </div>
         </aside>
@@ -439,6 +453,37 @@
                     </div>
                 </section>
 
+                <!-- 6. 人員與帳戶管理分頁 -->
+                <section id="tab-users" class="tab-content">
+                    <div class="users-layout card" style="padding: 24px;">
+                        <div class="panel-header-action" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3><i class="fa-solid fa-users-gear text-emerald"></i> 人員帳戶管理</h3>
+                            <button class="btn btn-primary" id="btn-add-user-modal"><i class="fa-solid fa-user-plus"></i> 新增人員</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="tx-table" id="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>使用者帳號</th>
+                                        <th>角色權限</th>
+                                        <th>註冊日期</th>
+                                        <th class="text-center" style="width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <!-- 動態載入人員列表 -->
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted" style="padding: 40px 0;">
+                                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 8px;"></i>
+                                            <p>帳戶載入中...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -588,6 +633,69 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-block modal-close-btn">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 登入與註冊 Modal (全螢幕覆蓋) -->
+    <div class="modal-backdrop" id="modal-auth" style="display: flex; background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(8px); z-index: 9999;">
+        <div class="modal-card" style="max-width: 400px; margin: auto;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <div style="text-align: center; width: 100%;">
+                    <i class="fa-solid fa-cash-register" style="font-size: 36px; color: var(--primary-color); margin-bottom: 12px;"></i>
+                    <h3 id="auth-title" style="margin: 0; font-size: 20px;">歡迎使用收銀點餐系統</h3>
+                    <p id="auth-desc" style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-secondary);">請登入您的帳戶以進行管理</p>
+                </div>
+            </div>
+            <div class="modal-body" style="padding-top: 20px;">
+                <form id="auth-form" onsubmit="return false;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="auth-username" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">使用者帳號</label>
+                        <input type="text" id="auth-username" class="form-control" placeholder="請輸入帳號" required autocomplete="username">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="auth-password" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">使用者密碼</label>
+                        <input type="password" id="auth-password" class="form-control" placeholder="請輸入密碼" required autocomplete="current-password">
+                    </div>
+                    <div class="form-group hidden" id="auth-confirm-group" style="margin-bottom: 15px;">
+                        <label for="auth-confirm-password" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">確認密碼</label>
+                        <input type="password" id="auth-confirm-password" class="form-control" placeholder="請再次輸入密碼">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: none; padding-top: 0;">
+                <button class="btn btn-primary btn-block" id="btn-auth-submit" style="padding: 12px; font-weight: bold; width: 100%;">登入系統</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 新增人員 Modal -->
+    <div class="modal-backdrop" id="modal-user">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h4>新增人員帳戶</h4>
+                <button class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="new-user-username" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">使用者帳號</label>
+                    <input type="text" id="new-user-username" class="form-control" placeholder="請輸入帳號" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="new-user-password" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">設定密碼</label>
+                    <input type="password" id="new-user-password" class="form-control" placeholder="請輸入密碼" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="new-user-role" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">角色權限</label>
+                    <select id="new-user-role" class="form-control">
+                        <option value="staff" selected>員工 (僅收銀結帳)</option>
+                        <option value="admin">主管 (完整權限)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close-btn">取消</button>
+                <button class="btn btn-primary" id="btn-save-user">新增</button>
             </div>
         </div>
     </div>

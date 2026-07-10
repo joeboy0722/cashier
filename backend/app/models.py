@@ -71,3 +71,22 @@ class SystemConfig(Base):
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String, unique=True, index=True, nullable=False) # 例如 "server_ip"
     value = Column(String, nullable=False)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False) # 帳號
+    password_hash = Column(String, nullable=False) # 密碼雜湊
+    salt = Column(String, nullable=False) # 密碼雜湊用 salt
+    role = Column(String, default="staff") # 角色: "admin" (主管), "staff" (員工)
+    created_at = Column(DateTime, default=datetime.now)
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True, nullable=False) # 登入憑證 token
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False) # 關聯用戶
+    created_at = Column(DateTime, default=datetime.now)
+    expires_at = Column(DateTime, nullable=False) # 過期時間

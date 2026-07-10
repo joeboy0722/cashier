@@ -1,7 +1,9 @@
 from typing import List
 from sqlalchemy.orm import Session
 from . import models, schemas
-from datetime import datetime
+from datetime import datetime, timedelta
+import hashlib
+import secrets
 
 # ----------------- System Config -----------------
 def get_system_config(db: Session, key: str):
@@ -265,3 +267,82 @@ def clear_table_orders(db: Session, table_name: str):
         
     db.commit()
     return active_orders
+
+# ----------------- User & Session Auth -----------------
+def hash_password(password: str, salt: str = None) -> tuple:
+    """
+    使用 pbkdf2_hmac 對密碼進行安全雜湊
+    """
+    if not salt:
+        salt = secrets.token_hex(16)
+    pwd_bytes = password.encode('utf-8')
+    salt_bytes = salt.encode('utf-8')
+    db_hash = hashlib.pbkdf2_hmac('sha256', pwd_bytes, salt_bytes, 100000)
+    return db_hash.hex(), salt
+
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+def get_user_by_id(db: Session, user_id: int):
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+def create_user(db: Session, user_in: schemas.UserCreate):
+    pwd_hash, salt = hash_password(user_in.password)
+    db_user = models.User(
+        username=user_in.username,
+        password_hash=pwd_hash,
+        salt=salt,
+        role=user_in.role
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def get_users(db: Session):
+    return db.query(models.User).all()
+
+def update_user_role(db: Session, user_id: int, role: str):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user:
+        db_user.role = role
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    return None
+
+def delete_user(db: Session, user_id: int):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user:
+        db.delete(db_user)
+        db.commit()
+        return True
+    return False
+
+def create_session(db: Session, user_id: int, expire_hours: int = 24):
+    token = secrets.token_hex(32)
+    expires_at = datetime.now() + timedelta(hours=expire_hours)
+    
+    db_session = models.UserSession(
+        token=token,
+        user_id=user_id,
+        expires_at=expires_at
+    )
+    db.add(db_session)
+    db.commit()
+    db.refresh(db_session)
+    return db_session
+
+def get_session_by_token(db: Session, token: str):
+    return db.query(models.UserSession).filter(
+        models.UserSession.token == token,
+        models.UserSession.expires_at > datetime.now()
+    ).first()
+
+def delete_session(db: Session, token: str):
+    db_session = db.query(models.UserSession).filter(models.UserSession.token == token).first()
+    if db_session:
+        db.delete(db_session)
+        db.commit()
+        return True
+    return False

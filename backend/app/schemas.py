@@ -130,3 +130,31 @@ class Order(BaseModel):
 # ----------------- History Retention Config -----------------
 class RetentionConfigUpdate(BaseModel):
     retention_days: int
+
+# ----------------- User & Auth -----------------
+class UserBase(BaseModel):
+    username: str
+
+class UserCreate(UserBase):
+    password: str
+    role: Optional[str] = "staff" # "admin" 或 "staff"
+
+class UserResponse(UserBase):
+    id: int
+    role: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserRoleUpdate(BaseModel):
+    role: str # "admin" 或 "staff"
+
+class TokenResponse(BaseModel):
+    token: str
+    username: str
+    role: str

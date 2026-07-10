@@ -20,16 +20,31 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
+# 解析命令列參數
+parser = argparse.ArgumentParser(description='收銀系統伺服器')
+parser.add_argument('--host', default='0.0.0.0', help='監聽位址 (預設: 0.0.0.0)')
+parser.add_argument('--port', type=int, default=8000, help='監聽埠號 (預設: 8000)')
+parser.add_argument('--demo', action='store_true', help='展示模式 (免登入且擁有主管完整權限)')
+args, unknown = parser.parse_known_args()
+
+# 如果啟用展示模式，在控制台進行確認
+if args.demo:
+    print("==================================================")
+    print("⚠️  警告：您正嘗試以【展示模式 (Demo Mode)】啟動系統！")
+    print("在此模式下，後台管理介面及所有 API 將不需要登入，並直接擁有【主管】完整管理權限！")
+    print("==================================================")
+    confirm = input("確認要以此模式啟動嗎？(y/yes): ").strip().lower()
+    if confirm not in ['y', 'yes']:
+        print("❌ 啟動已取消，程式退出。")
+        sys.exit(0)
+    # 設置環境變數傳遞給 app.main
+    os.environ["CASHIER_DEMO_MODE"] = "1"
+    print("ℹ️  展示模式已確認啟用！")
+
 import uvicorn
 from app.main import app, base_dir, frontend_dir, upload_dir
 
 if __name__ == '__main__':
-    # 解析命令列參數
-    parser = argparse.ArgumentParser(description='收銀系統伺服器')
-    parser.add_argument('--host', default='0.0.0.0', help='監聽位址 (預設: 0.0.0.0)')
-    parser.add_argument('--port', type=int, default=8000, help='監聽埠號 (預設: 8000)')
-    args = parser.parse_args()
-
     print(f"=== 收銀系統啟動 ===")
     print(f"基準目錄  : {base_dir}")
     print(f"前端目錄  : {frontend_dir}")

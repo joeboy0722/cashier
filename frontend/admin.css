@@ -1784,3 +1784,54 @@ input[type="color"]::-webkit-color-swatch {
     padding-left: 6px;
     font-weight: 600;
 }
+
+/* 帳戶管理與權限管控新增樣式 */
+.hidden {
+    display: none !important;
+}
+
+.user-badge button:hover {
+    color: var(--danger-color) !important;
+    opacity: 0.8;
+}
+
+.users-layout {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+#users-table td {
+    padding: 16px;
+    vertical-align: middle;
+}
+
+#users-table select.form-control {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+#users-table select.form-control:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 登入 Modal 輸入欄位調整 */
+#modal-auth .form-control {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 12px !important;
+    border-radius: var(--radius-sm) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#modal-auth .form-control:focus {
+    border-color: var(--primary-color) !important;
+    outline: none !important;
+}

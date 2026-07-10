@@ -3,6 +3,7 @@
    ========================================================================== */
 
 // 全域狀態管理
+// 全域狀態管理
 const state = {
     tables: [],
     categories: [],
@@ -17,7 +18,14 @@ const state = {
         active_ip: ''
     },
     transactions: [],
-    ws: null
+    ws: null,
+    currentUser: {
+        token: localStorage.getItem('cashier_token') || '',
+        username: localStorage.getItem('cashier_username') || '',
+        role: localStorage.getItem('cashier_role') || ''
+    },
+    isInitialized: false, // 系統是否已建立主管帳戶
+    demoMode: false // 展示模式狀態
 };
 
 // DOM 元素快照
@@ -105,68 +113,124 @@ const DOM = {
     receiptOrderId: document.getElementById('receipt-order-id'),
     receiptPaymentMethod: document.getElementById('receipt-payment-method'),
     receiptItemsContainer: document.getElementById('receipt-items-container'),
-    receiptTotalPrice: document.getElementById('receipt-total-price')
+    receiptTotalPrice: document.getElementById('receipt-total-price'),
+
+    // 帳戶管理與認證
+    navUsersBtn: document.getElementById('nav-users-btn'),
+    modalAuth: document.getElementById('modal-auth'),
+    authTitle: document.getElementById('auth-title'),
+    authDesc: document.getElementById('auth-desc'),
+    authForm: document.getElementById('auth-form'),
+    authUsername: document.getElementById('auth-username'),
+    authPassword: document.getElementById('auth-password'),
+    authConfirmGroup: document.getElementById('auth-confirm-group'),
+    authConfirmPassword: document.getElementById('auth-confirm-password'),
+    btnAuthSubmit: document.getElementById('btn-auth-submit'),
+    sidebarUserBadge: document.getElementById('sidebar-user-badge'),
+    loginUsername: document.getElementById('login-username'),
+    loginRole: document.getElementById('login-role'),
+    btnLogout: document.getElementById('btn-logout'),
+    btnSaveUser: document.getElementById('btn-save-user'),
+    modalUser: document.getElementById('modal-user'),
+    btnAddUserModal: document.getElementById('btn-add-user-modal'),
+    newUserUsername: document.getElementById('new-user-username'),
+    newUserPassword: document.getElementById('new-user-password'),
+    newUserRole: document.getElementById('new-user-role'),
+    usersTableBody: document.getElementById('users-table-body')
 };
 
 // ----------------- API 請求封裝 -----------------
 const API = {
+    getHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.currentUser.token) {
+            headers['Authorization'] = `Bearer ${state.currentUser.token}`;
+        }
+        return headers;
+    },
+    handleHttpError(res, errData = {}) {
+        if (res.status === 401) {
+            showToast('登入憑證已失效，請重新登入', 'error');
+            handleLogoutAction();
+            // 中斷流程
+            throw new Error('Unauthorized');
+        }
+        throw new Error(errData.detail || `HTTP 錯誤: ${res.status}`);
+    },
     async get(url) {
         try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
+            const headers = {};
+            if (state.currentUser.token) {
+                headers['Authorization'] = `Bearer ${state.currentUser.token}`;
+            }
+            const res = await fetch(url, { headers });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                this.handleHttpError(res, errData);
+            }
             return await res.json();
         } catch (err) {
             console.error(`API GET 失敗: ${url}`, err);
+            if (url.includes('/auth/check_init') || err.message === 'Unauthorized') throw err;
             showToast(`讀取失敗: ${err.message}`, 'error');
             throw err;
         }
     },
     async post(url, data) {
         try {
+            const headers = this.getHeaders();
             const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify(data)
             });
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.detail || `HTTP 錯誤: ${res.status}`);
+                this.handleHttpError(res, errData);
             }
             return await res.json();
         } catch (err) {
             console.error(`API POST 失敗: ${url}`, err);
+            if (err.message === 'Unauthorized') throw err;
             showToast(`送出失敗: ${err.message}`, 'error');
             throw err;
         }
     },
     async put(url, data) {
         try {
+            const headers = this.getHeaders();
             const res = await fetch(url, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify(data)
             });
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.detail || `HTTP 錯誤: ${res.status}`);
+                this.handleHttpError(res, errData);
             }
             return await res.json();
         } catch (err) {
             console.error(`API PUT 失敗: ${url}`, err);
+            if (err.message === 'Unauthorized') throw err;
             showToast(`更新失敗: ${err.message}`, 'error');
             throw err;
         }
     },
     async delete(url) {
         try {
-            const res = await fetch(url, { method: 'DELETE' });
+            const headers = {};
+            if (state.currentUser.token) {
+                headers['Authorization'] = `Bearer ${state.currentUser.token}`;
+            }
+            const res = await fetch(url, { method: 'DELETE', headers });
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.detail || `HTTP 錯誤: ${res.status}`);
+                this.handleHttpError(res, errData);
             }
             return await res.json();
         } catch (err) {
             console.error(`API DELETE 失敗: ${url}`, err);
+            if (err.message === 'Unauthorized') throw err;
             showToast(`刪除失敗: ${err.message}`, 'error');
             throw err;
         }
@@ -179,12 +243,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     initModals();
     initWebSocket();
     
+    // 首先檢查認證狀態
+    const authSuccess = await checkAuth();
+    if (!authSuccess) return; // 未登入，等待登入流程
+    
     // 載入初始資料
-    await loadIpConfig();
-    await loadTables();
-    await loadCategories();
-    await loadMenuItems();
-    await loadLayoutConfig();
+    await loadInitialData();
     
     // 初始化事件監聽
     initEvents();
@@ -255,47 +319,57 @@ function speakText(text) {
     }
 }
 
+function switchTab(tabId) {
+    // 尋找對應的按鈕
+    const btn = Array.from(DOM.tabs).find(b => b.getAttribute('data-tab') === tabId);
+    if (!btn) return;
+
+    // 更新按鈕樣式
+    DOM.tabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // 更新內容顯示
+    DOM.tabContents.forEach(content => {
+        content.classList.remove('active');
+        if (content.id === tabId) content.classList.add('active');
+    });
+    
+    state.currentTab = tabId;
+    
+    // 更新 Header 文字
+    const title = btn.querySelector('span').textContent;
+    DOM.tabTitle.textContent = title;
+    
+    if (tabId === 'tab-cashier') {
+        DOM.tabDesc.textContent = '即時查看餐廳桌況，進行現場付費結帳與訂單明細管理。';
+        loadTables();
+    } else if (tabId === 'tab-menu') {
+        DOM.tabDesc.textContent = '設定與組織您的餐點分類及單項品項。';
+        loadCategories();
+        loadMenuItems();
+    } else if (tabId === 'tab-designer') {
+        DOM.tabDesc.textContent = '打造專屬的點餐外觀，調整點餐系統的色調與版面設定。';
+        loadLayoutConfig();
+    } else if (tabId === 'tab-tables') {
+        DOM.tabDesc.textContent = '建立您的餐廳桌號，填寫外網 IP 並生成對應點餐 QR Code。';
+        loadTables();
+    } else if (tabId === 'tab-transactions') {
+        DOM.tabDesc.textContent = '查詢歷史收款紀錄、明細以及統計金額，並設定資料庫保留期限。';
+        initTxTabDates();
+        loadTransactions();
+        loadRetentionConfig();
+    } else if (tabId === 'tab-users') {
+        DOM.tabDesc.textContent = '管理餐廳的員工與主管帳戶，新增或刪除人員。';
+        loadUsers();
+    }
+}
+
 // ----------------- 分頁切換 -----------------
 function initTabs() {
     DOM.tabs.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
-            
-            // 更新按鈕樣式
-            DOM.tabs.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // 更新內容顯示
-            DOM.tabContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === tabId) content.classList.add('active');
-            });
-            
-            state.currentTab = tabId;
-            
-            // 更新 Header 文字
-            const title = btn.querySelector('span').textContent;
-            DOM.tabTitle.textContent = title;
-            
-            if (tabId === 'tab-cashier') {
-                DOM.tabDesc.textContent = '即時查看餐廳桌況，進行現場付費結帳與訂單明細管理。';
-                loadTables();
-            } else if (tabId === 'tab-menu') {
-                DOM.tabDesc.textContent = '設定與組織您的餐點分類及單項品項。';
-                loadCategories();
-                loadMenuItems();
-            } else if (tabId === 'tab-designer') {
-                DOM.tabDesc.textContent = '打造專屬的點餐外觀，調整點餐系統的色調與版面設定。';
-                loadLayoutConfig();
-            } else if (tabId === 'tab-tables') {
-                DOM.tabDesc.textContent = '建立您的餐廳桌號，填寫外網 IP 並生成對應點餐 QR Code。';
-                loadTables();
-            } else if (tabId === 'tab-transactions') {
-                DOM.tabDesc.textContent = '查詢歷史收款紀錄、明細以及統計金額，並設定資料庫保留期限。';
-                initTxTabDates();
-                loadTransactions();
-                loadRetentionConfig();
-            }
+            switchTab(tabId);
         });
     });
 }
@@ -1347,6 +1421,10 @@ function initEvents() {
 
     // 10. 保存保留天數設定
     DOM.btnSaveRetention.addEventListener('click', saveRetentionConfig);
+
+    // 11. 登出與帳戶管理事件
+    DOM.btnLogout.addEventListener('click', handleLogoutAction);
+    initUserManagementEvents();
 }
 
 // ----------------- Toast 通知系統 -----------------
@@ -1602,4 +1680,317 @@ async function saveRetentionConfig() {
     } catch (err) {
         showToast(`儲存設定失敗: ${err.message}`, 'error');
     }
+}
+
+// ----------------- 認證與權限控制 -----------------
+
+async function checkAuth() {
+    try {
+        // 檢查系統是否初始化主管，以及是否開啟展示模式
+        const initData = await API.get('/cashier/api/auth/check_init');
+        state.isInitialized = initData.initialized;
+        state.demoMode = initData.demo_mode || false;
+    } catch (err) {
+        console.error('檢查系統初始化失敗:', err);
+    }
+
+    if (state.demoMode) {
+        // 展示模式下，強制設定虛擬用戶資訊並繞過登入
+        state.currentUser = {
+            token: 'demo_token',
+            username: '展示管理員',
+            role: 'admin'
+        };
+        DOM.modalAuth.style.display = 'none';
+        updateUiByRole();
+        return true;
+    }
+
+    if (!state.currentUser.token) {
+        showAuthModal();
+        return false;
+    }
+
+    // 更新側邊欄使用者資訊與 UI 權限限制
+    updateUiByRole();
+    return true;
+}
+
+function showAuthModal() {
+    DOM.modalAuth.style.display = 'flex';
+    DOM.authUsername.value = '';
+    DOM.authPassword.value = '';
+    DOM.authConfirmPassword.value = '';
+
+    if (!state.isInitialized) {
+        DOM.authTitle.innerText = '首次啟動：註冊管理員';
+        DOM.authDesc.innerText = '系統目前沒有任何管理員，請註冊第一個主管帳戶';
+        DOM.authConfirmGroup.classList.remove('hidden');
+        DOM.btnAuthSubmit.innerText = '註冊並登入';
+    } else {
+        DOM.authTitle.innerText = '歡迎使用收銀點餐系統';
+        DOM.authDesc.innerText = '請輸入帳號密碼以登入管理後台';
+        DOM.authConfirmGroup.classList.add('hidden');
+        DOM.btnAuthSubmit.innerText = '登入系統';
+    }
+
+    // 初始化認證相關的點擊事件
+    initAuthEvents();
+}
+
+function initAuthEvents() {
+    // 避免重複綁定
+    DOM.btnAuthSubmit.onclick = async () => {
+        const username = DOM.authUsername.value.trim();
+        const password = DOM.authPassword.value;
+
+        if (!username || !password) {
+            showToast('請填寫所有欄位', 'warning');
+            return;
+        }
+
+        if (!state.isInitialized) {
+            const confirmPwd = DOM.authConfirmPassword.value;
+            if (password !== confirmPwd) {
+                showToast('兩次輸入的密碼不一致', 'warning');
+                return;
+            }
+            if (password.length < 6) {
+                showToast('密碼長度至少需 6 個字元', 'warning');
+                return;
+            }
+
+            try {
+                const res = await API.post('/cashier/api/auth/register_admin', { username, password });
+                saveUserSession(res);
+                showToast('管理員註冊並登入成功！', 'success');
+                DOM.modalAuth.style.display = 'none';
+                state.isInitialized = true;
+                await loadInitialData();
+                initEvents();
+            } catch (err) {
+                showToast(`註冊失敗: ${err.message}`, 'error');
+            }
+        } else {
+            try {
+                const res = await API.post('/cashier/api/auth/login', { username, password });
+                saveUserSession(res);
+                showToast('登入成功！', 'success');
+                DOM.modalAuth.style.display = 'none';
+                await loadInitialData();
+                initEvents();
+            } catch (err) {
+                showToast(`登入失敗: ${err.message}`, 'error');
+            }
+        }
+    };
+}
+
+function saveUserSession(data) {
+    localStorage.setItem('cashier_token', data.token);
+    localStorage.setItem('cashier_username', data.username);
+    localStorage.setItem('cashier_role', data.role);
+
+    state.currentUser.token = data.token;
+    state.currentUser.username = data.username;
+    state.currentUser.role = data.role;
+
+    updateUiByRole();
+}
+
+function updateUiByRole() {
+    DOM.sidebarUserBadge.classList.remove('hidden');
+    DOM.loginUsername.innerText = state.currentUser.username;
+    
+    if (state.demoMode) {
+        DOM.loginRole.innerText = '展示模式 (主管)';
+    } else {
+        DOM.loginRole.innerText = state.currentUser.role === 'admin' ? '主管' : '員工';
+    }
+
+    if (state.currentUser.role === 'admin') {
+        DOM.navUsersBtn.classList.remove('hidden');
+        // 主管可以看所有 tab
+        DOM.tabs.forEach(tab => {
+            tab.classList.remove('hidden');
+        });
+    } else {
+        DOM.navUsersBtn.classList.add('hidden');
+        // 員工只顯示桌況收銀
+        DOM.tabs.forEach(tab => {
+            if (tab.getAttribute('data-tab') !== 'tab-cashier') {
+                tab.classList.add('hidden');
+            }
+        });
+        // 強制切換到桌況收銀
+        switchTab('tab-cashier');
+    }
+}
+
+async function handleLogoutAction() {
+    if (state.demoMode) {
+        showToast('展示模式下無須登出，全權限開放中！', 'info');
+        return;
+    }
+
+    // 呼叫後端登出，忽略錯誤
+    if (state.currentUser.token) {
+        try {
+            await fetch('/cashier/api/auth/logout', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${state.currentUser.token}` }
+            });
+        } catch (e) {}
+    }
+
+    localStorage.removeItem('cashier_token');
+    localStorage.removeItem('cashier_username');
+    localStorage.removeItem('cashier_role');
+
+    state.currentUser.token = '';
+    state.currentUser.username = '';
+    state.currentUser.role = '';
+
+    // 重設 UI
+    DOM.sidebarUserBadge.classList.add('hidden');
+    
+    // 重新載入以觸發重新登入
+    location.reload();
+}
+
+async function loadInitialData() {
+    try {
+        await loadIpConfig();
+        await loadTables();
+        await loadCategories();
+        await loadMenuItems();
+        await loadLayoutConfig();
+        if (state.currentUser.role === 'admin') {
+            await loadUsers();
+        }
+    } catch (err) {
+        console.error('載入初始資料失敗:', err);
+    }
+}
+
+// ----------------- 人員與帳戶管理 -----------------
+
+async function loadUsers() {
+    try {
+        const users = await API.get('/cashier/api/users');
+        renderUsersList(users);
+    } catch (err) {
+        console.error('載入用戶列表失敗:', err);
+    }
+}
+
+function renderUsersList(users) {
+    if (!DOM.usersTableBody) return;
+    
+    if (users.length === 0) {
+        DOM.usersTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted" style="padding: 30px 0;">目前無其他人員帳戶</td>
+            </tr>`;
+        return;
+    }
+
+    DOM.usersTableBody.innerHTML = users.map(user => {
+        const isSelf = user.username === state.currentUser.username;
+        const formattedDate = new Date(user.created_at).toLocaleString('zh-TW', { hour12: false });
+        
+        return `
+            <tr>
+                <td style="font-weight: bold; color: var(--text-primary);">
+                    ${user.username} ${isSelf ? '<span class="badge" style="background: rgba(255,111,0,0.15); color: var(--primary-color); margin-left: 5px; font-size: 10px; padding: 2px 6px;">您自己</span>' : ''}
+                </td>
+                <td>
+                    <select class="form-control user-role-select" data-id="${user.id}" ${isSelf ? 'disabled' : ''} style="width: auto; padding: 4px 8px; font-size: 13px;">
+                        <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>員工</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>主管</option>
+                    </select>
+                </td>
+                <td class="text-muted" style="font-size: 13px;">${formattedDate}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-danger btn-delete-user" data-id="${user.id}" data-username="${user.username}" ${isSelf ? 'disabled' : ''} style="background: transparent; border: 1px solid var(--danger-color); color: var(--danger-color); padding: 4px 10px; border-radius: 4px; font-size: 12px;">
+                        <i class="fa-solid fa-trash-can"></i> 刪除帳戶
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // 綁定下拉更新角色事件
+    document.querySelectorAll('.user-role-select').forEach(select => {
+        select.onchange = async (e) => {
+            const userId = e.target.getAttribute('data-id');
+            const newRole = e.target.value;
+            try {
+                await API.put(`/cashier/api/users/${userId}/role`, { role: newRole });
+                showToast('人員權限已更新', 'success');
+                await loadUsers();
+            } catch (err) {
+                showToast(`更新失敗: ${err.message}`, 'error');
+                // 還原
+                await loadUsers();
+            }
+        };
+    });
+
+    // 綁定刪除帳戶事件
+    document.querySelectorAll('.btn-delete-user').forEach(btn => {
+        btn.onclick = async (e) => {
+            const button = e.currentTarget;
+            const userId = button.getAttribute('data-id');
+            const username = button.getAttribute('data-username');
+            
+            if (confirm(`確定要刪除人員帳戶「${username}」嗎？此動作將無法復原。`)) {
+                try {
+                    await API.delete(`/cashier/api/users/${userId}`);
+                    showToast('人員帳戶已成功刪除', 'success');
+                    await loadUsers();
+                } catch (err) {
+                    showToast(`刪除失敗: ${err.message}`, 'error');
+                }
+            }
+        };
+    });
+}
+
+function initUserManagementEvents() {
+    if (!DOM.btnAddUserModal) return;
+
+    // 開啟新增人員彈窗
+    DOM.btnAddUserModal.onclick = () => {
+        DOM.newUserUsername.value = '';
+        DOM.newUserPassword.value = '';
+        DOM.newUserRole.value = 'staff';
+        DOM.modalUser.style.display = 'flex';
+    };
+
+    // 儲存新人員
+    DOM.btnSaveUser.onclick = async () => {
+        const username = DOM.newUserUsername.value.trim();
+        const password = DOM.newUserPassword.value.trim();
+        const role = DOM.newUserRole.value;
+
+        if (!username || !password) {
+            showToast('請填寫帳號及密碼', 'warning');
+            return;
+        }
+
+        if (password.length < 6) {
+            showToast('密碼長度至少需 6 個字元', 'warning');
+            return;
+        }
+
+        try {
+            await API.post('/cashier/api/users', { username, password, role });
+            showToast('人員帳戶新增成功！', 'success');
+            DOM.modalUser.style.display = 'none';
+            await loadUsers();
+        } catch (err) {
+            showToast(`新增失敗: ${err.message}`, 'error');
+        }
+    };
 }
