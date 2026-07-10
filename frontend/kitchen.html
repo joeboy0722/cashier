@@ -437,6 +437,32 @@
         }
     </script>
     
+    <!-- 登入 Modal -->
+    <div class="modal-backdrop" id="modal-auth" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="modal-card" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; width: 90%; max-width: 400px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <div class="modal-header" style="text-align: center; margin-bottom: 20px;">
+                <i class="fa-solid fa-fire-burner" style="font-size: 36px; color: #ff6f00; margin-bottom: 12px;"></i>
+                <h3 style="margin: 0; font-size: 20px; color: #f8fafc; font-family: var(--font-main);">後廚系統登入</h3>
+                <p style="margin: 5px 0 0 0; font-size: 13px; color: #94a3b8; font-family: var(--font-main);">請輸入人員帳戶以使用廚房看板</p>
+            </div>
+            <div class="modal-body" style="margin-bottom: 20px;">
+                <form id="auth-form" onsubmit="return false;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="auth-username" style="display: block; margin-bottom: 6px; font-size: 13px; color: #94a3b8; font-family: var(--font-main);">帳號</label>
+                        <input type="text" id="auth-username" style="width: 100%; padding: 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #f8fafc; outline: none; font-size: 14px;" placeholder="請輸入帳號" required autocomplete="username">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="auth-password" style="display: block; margin-bottom: 6px; font-size: 13px; color: #94a3b8; font-family: var(--font-main);">密碼</label>
+                        <input type="password" id="auth-password" style="width: 100%; padding: 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #f8fafc; outline: none; font-size: 14px;" placeholder="請輸入密碼" required autocomplete="current-password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-finish" id="btn-auth-submit" style="width: 100%; padding: 12px; background: #ff6f00; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 15px;">登入後廚系統</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- 引入後廚邏輯 -->
     <script src="kitchen.js"></script>
 </body>

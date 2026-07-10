@@ -8,7 +8,13 @@ const API_BASE = '/cashier/api';
 const state = {
     preparingOrders: [], // 製作中 (status: pending)
     readyOrders: [],     // 請取餐 (status: ready)
-    ws: null
+    ws: null,
+    currentUser: {
+        token: localStorage.getItem('cashier_token') || '',
+        username: localStorage.getItem('cashier_username') || '',
+        role: localStorage.getItem('cashier_role') || ''
+    },
+    demoMode: false
 };
 
 // DOM 快照
@@ -23,24 +29,52 @@ const DOM = {
 
 // ----------------- API 封裝 -----------------
 const API = {
+    getHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.currentUser.token) {
+            headers['Authorization'] = `Bearer ${state.currentUser.token}`;
+        }
+        return headers;
+    },
     async get(url) {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
+        const headers = {};
+        if (state.currentUser.token) {
+            headers['Authorization'] = `Bearer ${state.currentUser.token}`;
+        }
+        const res = await fetch(url, { headers });
+        if (!res.ok) {
+            if (res.status === 401) {
+                handleUnauthorized();
+                throw new Error('Unauthorized');
+            }
+            throw new Error(`HTTP 錯誤: ${res.status}`);
+        }
         return await res.json();
     },
     async put(url, data) {
+        const headers = this.getHeaders();
         const res = await fetch(url, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(data)
         });
-        if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
+        if (!res.ok) {
+            if (res.status === 401) {
+                handleUnauthorized();
+                throw new Error('Unauthorized');
+            }
+            throw new Error(`HTTP 錯誤: ${res.status}`);
+        }
         return await res.json();
     }
 };
 
 // ----------------- 頁面初始化 -----------------
 document.addEventListener('DOMContentLoaded', async () => {
+    // 檢查認證狀態
+    const authSuccess = await checkAuth();
+    if (!authSuccess) return;
+
     // 1. 載入進行中訂單
     await loadActiveOrders();
     
@@ -247,4 +281,94 @@ function handleWsEvent(msg) {
         // 重新渲染清單
         renderAll();
     }
+}
+
+// ----------------- 後廚權限認證 -----------------
+async function checkAuth() {
+    try {
+        const res = await fetch('/cashier/api/auth/check_init');
+        const initData = await res.json();
+        state.demoMode = initData.demo_mode || false;
+    } catch (err) {
+        console.error('檢查展示模式失敗', err);
+    }
+
+    if (state.demoMode) {
+        state.currentUser = {
+            token: 'demo_token',
+            username: '展示管理員',
+            role: 'admin'
+        };
+        const modal = document.getElementById('modal-auth');
+        if (modal) modal.style.display = 'none';
+        return true;
+    }
+
+    if (!state.currentUser.token || (state.currentUser.role !== 'admin' && state.currentUser.role !== 'staff')) {
+        showAuthModal();
+        return false;
+    }
+
+    return true;
+}
+
+function showAuthModal() {
+    const modal = document.getElementById('modal-auth');
+    if (modal) modal.style.display = 'flex';
+    
+    const btn = document.getElementById('btn-auth-submit');
+    if (btn) {
+        btn.onclick = async () => {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+            
+            if (!username || !password) {
+                alert('請輸入帳號和密碼');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/cashier/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || '帳密錯誤');
+                }
+                const data = await res.json();
+                
+                if (data.role !== 'admin' && data.role !== 'staff') {
+                    alert('權限不足，廚房看板至少需員工權限');
+                    return;
+                }
+                
+                localStorage.setItem('cashier_token', data.token);
+                localStorage.setItem('cashier_username', data.username);
+                localStorage.setItem('cashier_role', data.role);
+                
+                state.currentUser = {
+                    token: data.token,
+                    username: data.username,
+                    role: data.role
+                };
+                
+                modal.style.display = 'none';
+                // 重新加載資料與 WebSocket
+                await loadActiveOrders();
+                initWebSocket();
+            } catch (err) {
+                alert(`登入失敗: ${err.message}`);
+            }
+        };
+    }
+}
+
+function handleUnauthorized() {
+    localStorage.removeItem('cashier_token');
+    localStorage.removeItem('cashier_username');
+    localStorage.removeItem('cashier_role');
+    state.currentUser = { token: '', username: '', role: '' };
+    location.reload();
 }
